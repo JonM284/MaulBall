@@ -330,7 +330,7 @@ MeshRenderer:
   m_ReflectionProbeUsage: 1
   m_RenderingLayerMask: 4294967295
   m_Materials:
-  - {fileID: 2100000, guid: 5c52debaccacbff448b7a639b23c584f, type: 2}
+  - {fileID: 2100000, guid: fffbd1efb3e4ca9428486cc49ce7d7ca, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -19496,7 +19496,7 @@ MeshRenderer:
   m_ReflectionProbeUsage: 1
   m_RenderingLayerMask: 4294967295
   m_Materials:
-  - {fileID: 2100000, guid: a694c984ed478094f9426a5fc252a625, type: 2}
+  - {fileID: 2100000, guid: 230894d9ff2808648a0b62a65efa3412, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -20560,7 +20560,7 @@ Light:
   serializedVersion: 8
   m_Type: 1
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_Intensity: 0.3
+  m_Intensity: 0.4
   m_Range: 10
   m_SpotAngle: 30
   m_CookieSize: 10
@@ -30104,7 +30104,7 @@ MeshRenderer:
   m_ReflectionProbeUsage: 1
   m_RenderingLayerMask: 4294967295
   m_Materials:
-  - {fileID: 2100000, guid: 5c52debaccacbff448b7a639b23c584f, type: 2}
+  - {fileID: 2100000, guid: fffbd1efb3e4ca9428486cc49ce7d7ca, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -44644,7 +44644,7 @@ MeshRenderer:
   m_ReflectionProbeUsage: 1
   m_RenderingLayerMask: 4294967295
   m_Materials:
-  - {fileID: 2100000, guid: 5c52debaccacbff448b7a639b23c584f, type: 2}
+  - {fileID: 2100000, guid: fffbd1efb3e4ca9428486cc49ce7d7ca, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -54203,7 +54203,7 @@ MeshRenderer:
   m_ReflectionProbeUsage: 1
   m_RenderingLayerMask: 4294967295
   m_Materials:
-  - {fileID: 2100000, guid: a694c984ed478094f9426a5fc252a625, type: 2}
+  - {fileID: 2100000, guid: 230894d9ff2808648a0b62a65efa3412, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -63825,7 +63825,7 @@ MeshRenderer:
   m_ReflectionProbeUsage: 1
   m_RenderingLayerMask: 4294967295
   m_Materials:
-  - {fileID: 2100000, guid: a694c984ed478094f9426a5fc252a625, type: 2}
+  - {fileID: 2100000, guid: 230894d9ff2808648a0b62a65efa3412, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

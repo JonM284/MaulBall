@@ -332,6 +332,17 @@ public class Player_Behaviour : MonoBehaviour {
         speed = _tackle_Speed;
     }
 
+    public void Swap_Possessor(GameObject _new_Owner)
+    {
+        m_Owned_Ball.transform.parent = null;
+        _new_Owner.GetComponent<Player_Behaviour>().m_Owned_Ball = this.m_Owned_Ball;
+        m_Owned_Ball.transform.parent = _new_Owner.GetComponent<Player_Behaviour>().Ball_Held_Pos;
+        m_Owned_Ball.transform.position = _new_Owner.GetComponent<Player_Behaviour>().Ball_Held_Pos.position;
+        m_Owned_Ball = null;
+
+        Camera_Behaviour.cam_Inst.Update_Target(_new_Owner.transform);
+    }
+
     Vector3 Find_Players_In_Range(Vector3 _dir)
     {
         for (int i = 0; i < accept_Teammates.Count; i++)
@@ -398,7 +409,7 @@ public class Player_Behaviour : MonoBehaviour {
         {
             Vector3 random_Dir = new Vector3(damage_Dir.x + Random.Range(-0.3f,0.3f), Random.Range(0f,0.8f), damage_Dir.z + Random.Range(-0.3f,0.3f));
             float random_Force = Random.Range(ball_Force/2, ball_Force);
-            m_Owned_Ball.GetComponent<Rigidbody>().AddForce((random_Dir * -1f) * random_Force);
+            m_Owned_Ball.GetComponent<Rigidbody>().AddForce((random_Dir) * random_Force);
         }
         m_Owned_Ball.GetComponent<Collider>().enabled = true;
         m_Owned_Ball.GetComponent<Ball_Effects>().Activate_Trail();
@@ -422,7 +433,7 @@ public class Player_Behaviour : MonoBehaviour {
         m_Time_To_Reach = _time;
     }
 
-    public void Take_Damage(Vector3 _attacker_Pos, float _damage_Cooldown)
+    public void Take_Damage(Vector3 _attacker_Pos, float _damage_Cooldown, bool _Is_Stealing)
     {
         damage_Dir = (_attacker_Pos - transform.position) * -1f;
         float _damage_Speed = speed * tackle_Speed_Mod * 2f;
@@ -431,7 +442,9 @@ public class Player_Behaviour : MonoBehaviour {
         m_Read_Player_Inputs = false;
         damage_Cooldown_Max = _damage_Cooldown;
         if (m_Owned_Ball != null) {
-            Throw_Ball();
+            if (!_Is_Stealing) {
+                Throw_Ball();
+            }
             Camera_Behaviour.cam_Inst.Do_Camera_Shake(0.3f, 0.6f);
         }
         else
@@ -480,10 +493,11 @@ public class Player_Behaviour : MonoBehaviour {
         if (other.gameObject.tag == "Player" && (m_Is_Tackling || m_Is_Slide_Tackling))
         {
             if (m_Is_Tackling) {
-                other.gameObject.GetComponent<Player_Behaviour>().Take_Damage(transform.position, tackle_Damage_Cooldown);
+                other.gameObject.GetComponent<Player_Behaviour>().Take_Damage(transform.position, tackle_Damage_Cooldown, true);
+                other.gameObject.GetComponent<Player_Behaviour>().Swap_Possessor(this.gameObject);
             }else if (m_Is_Slide_Tackling)
             {
-                other.gameObject.GetComponent<Player_Behaviour>().Take_Damage(transform.position, slide_Tackle_Damage_Cooldown);
+                other.gameObject.GetComponent<Player_Behaviour>().Take_Damage(transform.position, slide_Tackle_Damage_Cooldown, false);
                 m_can_Catch_Ball = false;
             }
 
