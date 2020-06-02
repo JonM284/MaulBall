@@ -37,7 +37,7 @@ public class Player_Behaviour : MonoBehaviour {
     private float m_Input_X, m_Input_Y, m_Horizontal_Comp, m_Vertical_Comp, m_anti_Bump_Factor = 0.75f;
     private float m_Ball_Throw_Cooldown = 0.5f, m_Orig_Cooldown, m_Tackle_Duration, m_Slide_Tackle_Duration
         , m_original_Speed, m_Attack_Speed_Cooldown = 1f, m_Time_To_Reach, m_Damage_Cooldown, m_DC_Max_Original, m_Electric_Damage_Cooldown;
-    private GameObject m_Owned_Ball;
+    [HideInInspector] public GameObject m_Owned_Ball;
     private Player m_Player;
     private bool m_can_Catch_Ball = true, m_Is_Holding_Lob = false, m_Is_Tackling = false, m_Is_Slide_Tackling = false
         , m_Read_Player_Inputs = true, m_Has_Attacked = false, m_Taking_Damage = false;
@@ -145,7 +145,7 @@ public class Player_Behaviour : MonoBehaviour {
             transform.forward = Vector3.Slerp(transform.forward, rayDir, Time.deltaTime * rot_Mod);
         }
 
-        if (player_Controlled && m_Owned_Ball != null)
+        if (player_Controlled)
         {
             Find_Players_In_Range(rayDir);
         }
@@ -160,6 +160,7 @@ public class Player_Behaviour : MonoBehaviour {
     {
         vel.x = _dash_Dir.x * speed;
         vel.z = _dash_Dir.z * speed;
+        
 
         rb.MovePosition(rb.position + new Vector3(Mathf.Clamp(vel.x, -speed, speed),
             vel.y, Mathf.Clamp(vel.z, -speed, speed)) * m_speed_Modifier * Time.deltaTime);
@@ -167,39 +168,50 @@ public class Player_Behaviour : MonoBehaviour {
 
     void Check_Inputs()
     {
+        //press w/o ball to pass, press w/ ball to swap players
         if (m_Player.GetButtonDown("S_Pass") && m_Owned_Ball != null)
         {
+            //throw ball at closer teammate
             Throw_Ball();
         }
         else if (m_Player.GetButtonDown("S_Pass") && m_Owned_Ball == null && player_Controlled)
         {
             //Swap players
+            Swap_Players();
         }
 
+        // press to steal
         if (m_Player.GetButtonDown("D_Tackle") && m_Owned_Ball == null && player_Controlled && !m_Taking_Damage)
         {
+            //attempt to steal
             Tackle();
         }
 
+        //hold to preform a lob pass
         m_Is_Holding_Lob = (m_Player.GetButton("S_Lob") && m_Owned_Ball != null) ? true : false;
 
+        //press without ball to preform a MAUL
         if (m_Player.GetButtonDown("S_Lob") && m_Owned_Ball == null && player_Controlled && !m_Taking_Damage)
         {
+            //Maul
             Slide_Tackle();
         }
 
+        //press to use primary ability
         if (m_Player.GetButtonDown("Ability_1") && !m_Taking_Damage)
         {
             //Do ability
             //Start Cooldown
         }
 
+        //press to use secondary ability
         if (m_Player.GetButtonDown("Ability_2") && !m_Taking_Damage)
         {
             //Do ability
             //Start Cooldown
         }
 
+        //check whether or not player is moving
         if (Mathf.Abs(m_Horizontal_Comp) > 0.1f || Mathf.Abs(m_Vertical_Comp) > 0.1f)
         {
             m_Is_Moving = true;
@@ -282,6 +294,7 @@ public class Player_Behaviour : MonoBehaviour {
             if (!m_Wall_In_Damage_Dir()) {
                 float prc = m_Damage_Cooldown / damage_Cooldown_Max;
                 speed = Mathf.Lerp(speed, 0, prc);
+
             }else
             {
                 speed = 0;
@@ -369,6 +382,33 @@ public class Player_Behaviour : MonoBehaviour {
         return transform.forward;
     }
 
+    void Swap_Players()
+    {
+
+        if (passable_Teammates.Count >= 2)
+        {
+            float angle1 = Vector3.Angle(rayDir, passable_Teammates[0].transform.position - transform.position);
+            float angle2 = Vector3.Angle(rayDir, passable_Teammates[1].transform.position - transform.position);
+            if (angle2 < angle1)
+            {
+                passable_Teammates[0] = passable_Teammates[1];
+            }
+        }
+
+        if (passable_Teammates.Count > 0) {
+            player_Controlled = false;
+            passable_Teammates[0].player_Controlled = true;
+        }
+
+        if (passable_Teammates.Count > 0)
+        {
+            for (int i = 0; i < passable_Teammates.Count; i++)
+            {
+                passable_Teammates.Remove(passable_Teammates[i]);
+            }
+        }
+    }
+
     /// <summary>
     /// apply force to the ball
     /// </summary>
@@ -407,7 +447,14 @@ public class Player_Behaviour : MonoBehaviour {
             passable_Teammates[0].player_Controlled = true;
         }else if (m_Taking_Damage)
         {
-            Vector3 random_Dir = new Vector3(damage_Dir.x + Random.Range(-0.3f,0.3f), Random.Range(0f,0.8f), damage_Dir.z + Random.Range(-0.3f,0.3f));
+            Vector3 random_Dir = Vector3.zero;
+            if (m_Wall_In_Damage_Dir()) {
+                damage_Dir *= -1;
+                random_Dir = new Vector3(damage_Dir.x + Random.Range(-0.4f, 0.4f), Random.Range(0f, 1f), damage_Dir.z + Random.Range(-0.4f, 0.4f));
+            }else
+            {
+                random_Dir = new Vector3(damage_Dir.x + Random.Range(-0.4f, 0.4f), Random.Range(0f, 2f), damage_Dir.z + Random.Range(-0.4f, 0.4f));
+            }
             float random_Force = Random.Range(ball_Force/2, ball_Force);
             m_Owned_Ball.GetComponent<Rigidbody>().AddForce((random_Dir) * random_Force);
         }
@@ -417,6 +464,7 @@ public class Player_Behaviour : MonoBehaviour {
         m_Owned_Ball.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.None;
         
         m_Owned_Ball = null;
+
         if (passable_Teammates.Count > 0) {
             for (int i = 0; i < passable_Teammates.Count; i++)
             {
@@ -436,11 +484,13 @@ public class Player_Behaviour : MonoBehaviour {
     public void Take_Damage(Vector3 _attacker_Pos, float _damage_Cooldown, bool _Is_Stealing)
     {
         damage_Dir = (_attacker_Pos - transform.position) * -1f;
+        
         float _damage_Speed = speed * tackle_Speed_Mod * 2f;
         speed = _damage_Speed;
         m_Taking_Damage = true;
         m_Read_Player_Inputs = false;
         damage_Cooldown_Max = _damage_Cooldown;
+        
         if (m_Owned_Ball != null) {
             if (!_Is_Stealing) {
                 Throw_Ball();
@@ -494,7 +544,9 @@ public class Player_Behaviour : MonoBehaviour {
         {
             if (m_Is_Tackling) {
                 other.gameObject.GetComponent<Player_Behaviour>().Take_Damage(transform.position, tackle_Damage_Cooldown, true);
-                other.gameObject.GetComponent<Player_Behaviour>().Swap_Possessor(this.gameObject);
+                if (other.gameObject.GetComponent<Player_Behaviour>().m_Owned_Ball != null) {
+                    other.gameObject.GetComponent<Player_Behaviour>().Swap_Possessor(this.gameObject);
+                }
             }else if (m_Is_Slide_Tackling)
             {
                 other.gameObject.GetComponent<Player_Behaviour>().Take_Damage(transform.position, slide_Tackle_Damage_Cooldown, false);

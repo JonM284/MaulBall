@@ -1,0 +1,58 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 6
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_Name: Ghost_Mat_Orange
+  m_Shader: {fileID: 4800000, guid: d51b21d9091a725498f85a59eef74e63, type: 3}
+  m_ShaderKeywords: 
+  m_LightmapFlags: 0
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _Diffuse:
+        m_Texture: {fileID: 2800000, guid: 84508b93f15f2b64386ec07486afc7a3, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _TextureSample0:
+        m_Texture: {fileID: 2800000, guid: 9f6fc605dd90e4d42a9304452be26780, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Texture_Grid:
+        m_Texture: {fileID: 2800000, guid: a73daf043311c12488120d6b75a01b81, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ToonRamp:
+        m_Texture: {fileID: 2800000, guid: 52e66a9243cdfed44b5e906f5910d35b, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _texcoord:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Floats:
+    - _ASEOutlineWidth: 0.02
+    - _Depth_Distance: 1.8
+    - _Depth_Intensity: 0.196
+    - _Fresnel_Power: 1.84
+    - _Opacity: 0.69
+    - _RimOffset: 0.24
+    - _RimPower: 0.5
+    - _Scale: 6.8
+    - _Y_speed: 0.59
+    - __dirty: 0
+    m_Colors:
+    - _ASEOutlineColor: {r: 0, g: 0, b: 0, a: 0}
+    - _Color0: {r: 0, g: 0, b: 0, a: 0}
+    - _Fresnel_Color: {r: 0.9254902, g: 0.70641845, b: 0.35294124, a: 0}
+    - _Model_Color: {r: 0.83137256, g: 0.6037545, b: 0.2235294, a: 0}
+    - _RimColor: {r: 0, g: 1, b: 0.8758622, a: 0}
+    - _Tint_Color: {r: 0, g: 0, b: 0, a: 0}
