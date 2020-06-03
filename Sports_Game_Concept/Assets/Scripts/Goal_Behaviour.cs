@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
 
 public class Goal_Behaviour : MonoBehaviour {
 
@@ -9,17 +10,20 @@ public class Goal_Behaviour : MonoBehaviour {
     public int team_ID;
     public float time_To_Score;
     public Transform[] spawn_Zones;
-
+    public TMP_Text health_Text;
     
 
     private bool m_Ball_In_Zone = false;
     private float m_Current_Used_Time;
 
-
+    
 
 	// Use this for initialization
 	void Start () {
-       
+        if (health_Text != null)
+        {
+            health_Text.gameObject.name = "Goal" +team_ID+ "Text";
+        }
     }
 	
 	// Update is called once per frame
@@ -33,7 +37,24 @@ public class Goal_Behaviour : MonoBehaviour {
         {
             Add_Score();
         }
+
+        if (health_Text != null) {
+            int _health_Amount = Mathf.RoundToInt(time_To_Score) - Mathf.CeilToInt(m_Current_Used_Time);
+            health_Text.text = _health_Amount.ToString();
+        }
 	}
+
+   
+
+    private void OnBecameVisible()
+    {
+        health_Text.gameObject.SetActive(true);
+    }
+
+    private void OnBecameInvisible()
+    {
+        health_Text.gameObject.SetActive(false);
+    }
 
     void Reset_Timer()
     {
@@ -74,7 +95,6 @@ public class Goal_Behaviour : MonoBehaviour {
         if ((other.gameObject.tag == "Player" && other.gameObject.GetComponent<Player_Behaviour>().m_Owned_Ball != null) || other.gameObject.tag == "Ball")
         {
             m_Ball_In_Zone = false;
-            Reset_Timer();
         }
     }
 }
