@@ -15,37 +15,54 @@ public class Player_Behaviour : MonoBehaviour {
     public Vector3 vel;
     public TrailRenderer running_Trail;
 
-    [Header("Ground ray variables")]
+    [Header("Ray variables")]
     [SerializeField]private float ground_Ray_Rad;
-    [SerializeField]private float ground_Ray_Dist;
+    [SerializeField]private float ground_Ray_Dist, m_ball_Check_Radius, m_Melee_Range;
 
     [Header("Passing Variables")]
     public float reg_Pass_H_Offset;
-    public float lob_Pass_H_Offset;
+    public float lob_Pass_H_Offset, Pass_Angle;
 
     [Header("Player Variables")]
     public float tackle_Dur_Max;
     public float slide_Tackle_Dur_Max, attack_Speed_Cooldown_Max, pass_Range, Input_Speed, slide_Tackle_Speed_Mod,
-        tackle_Speed_Mod, damage_Cooldown_Max, tackle_Damage_Cooldown = 0.5f, slide_Tackle_Damage_Cooldown = 1.5f;
+        tackle_Speed_Mod, damage_Cooldown_Max, tackle_Damage_Cooldown = 0.5f, slide_Tackle_Damage_Cooldown = 1.5f, attack_Cooldown;
 
     public List<Player_Behaviour> accept_Teammates, passable_Teammates;
 
+    [HideInInspector]public Team_Managers team_Manager;
+    [HideInInspector]public Goal_Behaviour goal, enemy_Goal;
 
     private Rigidbody rb;
     private float m_speed_Modifier = 1;
     private Vector3 rayDir;
     private float m_Input_X, m_Input_Y, m_Horizontal_Comp, m_Vertical_Comp, m_anti_Bump_Factor = 0.75f;
+    private float min_Z, max_Z;
     private float m_Ball_Throw_Cooldown = 0.5f, m_Orig_Cooldown, m_Tackle_Duration, m_Slide_Tackle_Duration
-        , m_original_Speed, m_Attack_Speed_Cooldown = 1f, m_Time_To_Reach, m_Damage_Cooldown, m_DC_Max_Original, m_Electric_Damage_Cooldown;
+        , m_original_Speed, m_Attack_Speed_Cooldown = 1f, m_Time_To_Reach, m_Damage_Cooldown, m_DC_Max_Original, m_Electric_Damage_Cooldown, 
+        m_orig_attack_Cooldown;
     [HideInInspector] public GameObject m_Owned_Ball;
     private Player m_Player;
     private bool m_can_Catch_Ball = true, m_Is_Holding_Lob = false, m_Is_Tackling = false, m_Is_Slide_Tackling = false
-        , m_Read_Player_Inputs = true, m_Has_Attacked = false, m_Taking_Damage = false;
+        , m_Read_Player_Inputs = true, m_Has_Attacked = false, m_Is_Attacking = false, m_Taking_Damage = false;
     private ParticleSystem impact_PS;
 
     [SerializeField] private bool m_Is_Moving, m_Is_Being_Passed_To = false;
     private Vector3 m_Ball_End_Position, damage_Dir;
 
+    //AI Variables
+    [HideInInspector]public Transform target_Pos, saved_Target_Pos;
+    public float random_Offset;
+    private Vector3 m_random_Offset, target_Vec;
+
+    public enum status
+    {
+        IDLE,
+        ATTACK,
+        DEFEND 
+    }
+
+    public status current_Status;
 
     private void Awake()
     {
@@ -58,11 +75,11 @@ public class Player_Behaviour : MonoBehaviour {
         }
 
         impact_PS = transform.Find("Hit_Effect").GetComponent<ParticleSystem>();
-
+       
     }
 
     // Use this for initialization
-    void Start () {
+    void Start() {
         rb = GetComponent<Rigidbody>();
         m_Player = ReInput.players.GetPlayer(Player_ID - 1);
         m_Orig_Cooldown = m_Ball_Throw_Cooldown;
@@ -70,17 +87,18 @@ public class Player_Behaviour : MonoBehaviour {
         m_Attack_Speed_Cooldown = attack_Speed_Cooldown_Max;
         m_DC_Max_Original = damage_Cooldown_Max;
         m_Electric_Damage_Cooldown = damage_Cooldown_Max + 1.5f;
+        m_orig_attack_Cooldown = attack_Cooldown;
     }
 
     private void FixedUpdate()
     {
         if (m_Read_Player_Inputs) {
             Movement();
-        }else
+        } else
         {
             if (m_Is_Slide_Tackling || m_Is_Tackling) {
                 Do_Dash(transform.forward);
-            }else if (m_Taking_Damage)
+            } else if (m_Taking_Damage)
             {
                 Do_Dash(damage_Dir);
             }
@@ -88,47 +106,75 @@ public class Player_Behaviour : MonoBehaviour {
     }
 
     // Update is called once per frame
-    void Update () {
+    void Update() {
         if (player_Controlled) {
             m_Horizontal_Comp = m_Player.GetAxisRaw("Horizontal");
             m_Vertical_Comp = m_Player.GetAxisRaw("Vertical");
-        }else
+        } else
         {
-            m_Horizontal_Comp = 0;
-            m_Vertical_Comp = 0;
+            if (current_Status == status.ATTACK) {
+
+                if (Vector3.Magnitude(target_Vec - transform.position) > 4) {
+                    Vector3 _dir_To_Target = target_Vec - transform.position;
+                    Vector3 _Norm_Dir = _dir_To_Target.normalized;
+                    m_Horizontal_Comp = _Norm_Dir.x;
+                    m_Vertical_Comp = _Norm_Dir.z;
+                } else
+                {
+                    Random_Target_Pos(target_Pos);
+                }
+            } else if (current_Status == status.DEFEND && !m_In_Melee_Range() && !m_Taking_Damage) {
+                if (Vector3.Magnitude(target_Vec - transform.position) > 4)
+                {
+                    Vector3 _dir_To_Target = target_Vec - transform.position;
+                    Vector3 _Norm_Dir = _dir_To_Target.normalized;
+                    m_Horizontal_Comp = _Norm_Dir.x;
+                    m_Vertical_Comp = _Norm_Dir.z;
+                }
+                else
+                {
+                    Defend_Goal_Pos();
+                }
+            } else if (current_Status == status.DEFEND && m_In_Melee_Range() && !m_Is_Attacking && !m_Has_Attacked && !m_Taking_Damage) {
+                Slide_Tackle();
+            } else
+            {
+                m_Horizontal_Comp = 0;
+                m_Vertical_Comp = 0;
+            }
         }
 
         Check_Inputs();
         Check_Cooldowns();
-
+        
     }
 
-    
+
 
 
     void Movement()
     {
-
+        
         m_Input_X = Mathf.Lerp(m_Input_X, m_Horizontal_Comp, Time.deltaTime * Input_Speed);
         m_Input_Y = Mathf.Lerp(m_Input_Y, m_Vertical_Comp, Time.deltaTime * Input_Speed);
-
         
+
         vel.x = m_Input_X * speed;
         vel.z = m_Input_Y * speed;
-        
+
 
         if (!m_Is_Grounded())
         {
             vel.y -= gravity * Time.deltaTime;
-        }else
+        } else
         {
             vel.y = 0;
         }
 
 
-        m_speed_Modifier = (m_Player.GetButton("Sprint") && m_Owned_Ball !=null) ? sprint_speed_Mod : 1;
+        m_speed_Modifier = (m_Player.GetButtonLongPressDown("Sprint") && m_Owned_Ball != null) ? sprint_speed_Mod : 1;
         if (running_Trail != null) {
-            running_Trail.enabled = (m_Player.GetButton("Sprint") && m_Owned_Ball != null) ? true : false;
+            running_Trail.enabled = (m_Player.GetButtonLongPressDown("Sprint") && m_Owned_Ball != null) ? true : false;
         }
 
 
@@ -150,26 +196,26 @@ public class Player_Behaviour : MonoBehaviour {
             Find_Players_In_Range(rayDir);
         }
 
-        rb.MovePosition(rb.position + new Vector3(Mathf.Clamp(vel.x, -speed, speed), 
+        rb.MovePosition(rb.position + new Vector3(Mathf.Clamp(vel.x, -speed, speed),
             vel.y, Mathf.Clamp(vel.z, -speed, speed)) * m_speed_Modifier * Time.deltaTime);
 
-        
+
     }
 
     void Do_Dash(Vector3 _dash_Dir)
     {
         vel.x = _dash_Dir.x * speed;
         vel.z = _dash_Dir.z * speed;
-        
+
 
         rb.MovePosition(rb.position + new Vector3(Mathf.Clamp(vel.x, -speed, speed),
-            vel.y, Mathf.Clamp(vel.z, -speed, speed)) * m_speed_Modifier * Time.deltaTime);
+            vel.y, Mathf.Clamp(vel.z, -speed, speed)) * Time.deltaTime);
     }
 
     void Check_Inputs()
     {
         //press w/o ball to pass, press w/ ball to swap players
-        if (m_Player.GetButtonDown("S_Pass") && m_Owned_Ball != null)
+        if (m_Player.GetButtonDown("S_Pass") && m_Owned_Ball != null && !m_Wall_In_Front())
         {
             //throw ball at closer teammate
             Throw_Ball();
@@ -181,7 +227,7 @@ public class Player_Behaviour : MonoBehaviour {
         }
 
         // press to steal
-        if (m_Player.GetButtonDown("D_Tackle") && m_Owned_Ball == null && player_Controlled && !m_Taking_Damage)
+        if (m_Player.GetButtonDown("D_Tackle") && m_Owned_Ball == null && player_Controlled && !m_Taking_Damage && !m_Has_Attacked)
         {
             //attempt to steal
             Tackle();
@@ -191,10 +237,15 @@ public class Player_Behaviour : MonoBehaviour {
         m_Is_Holding_Lob = (m_Player.GetButton("S_Lob") && m_Owned_Ball != null) ? true : false;
 
         //press without ball to preform a MAUL
-        if (m_Player.GetButtonDown("S_Lob") && m_Owned_Ball == null && player_Controlled && !m_Taking_Damage)
+        if (m_Player.GetButtonDown("S_Lob") && m_Owned_Ball == null && player_Controlled && !m_Taking_Damage && !m_Has_Attacked)
         {
             //Maul
             Slide_Tackle();
+        }
+
+        if (m_Player.GetButtonSinglePressDown("Sprint") && player_Controlled)
+        {
+            team_Manager.Change_Status(this.gameObject);
         }
 
         //press to use primary ability
@@ -215,12 +266,12 @@ public class Player_Behaviour : MonoBehaviour {
         if (Mathf.Abs(m_Horizontal_Comp) > 0.1f || Mathf.Abs(m_Vertical_Comp) > 0.1f)
         {
             m_Is_Moving = true;
-        }else if (m_Horizontal_Comp == 0 && m_Vertical_Comp == 0)
+        } else if (m_Horizontal_Comp == 0 && m_Vertical_Comp == 0)
         {
             m_Is_Moving = false;
         }
 
-        
+
     }
 
     void Check_Cooldowns()
@@ -247,7 +298,7 @@ public class Player_Behaviour : MonoBehaviour {
             m_Is_Slide_Tackling = false;
             m_Read_Player_Inputs = true;
             Slow_Speed();
-           
+
         }
 
         if (m_Tackle_Duration <= tackle_Dur_Max && m_Is_Tackling)
@@ -273,13 +324,14 @@ public class Player_Behaviour : MonoBehaviour {
             Reset_Speed();
         }
 
+
         if (!player_Controlled && m_Is_Being_Passed_To && m_Time_To_Reach > 0)
         {
             m_Time_To_Reach -= Time.deltaTime;
             Vector3 dir_To_Ball = m_Ball_End_Position - transform.position;
             rayDir.x = dir_To_Ball.normalized.x;
             rayDir.z = dir_To_Ball.normalized.z;
-            Debug.Log("Moving Dir: " +rayDir);
+            Debug.Log("Moving Dir: " + rayDir);
         }
 
         if (m_Time_To_Reach <= 0 && !player_Controlled && m_Is_Being_Passed_To)
@@ -295,7 +347,7 @@ public class Player_Behaviour : MonoBehaviour {
                 float prc = m_Damage_Cooldown / damage_Cooldown_Max;
                 speed = Mathf.Lerp(speed, 0, prc);
 
-            }else
+            } else
             {
                 speed = 0;
                 damage_Cooldown_Max = m_Electric_Damage_Cooldown;
@@ -310,14 +362,14 @@ public class Player_Behaviour : MonoBehaviour {
             m_Read_Player_Inputs = true;
             Slow_Speed();
         }
-       
+
     }
 
     public void Slow_Speed()
     {
         m_Has_Attacked = true;
-
-        float _Slowed_Speed = m_original_Speed/3f;
+        m_Is_Attacking = false;
+        float _Slowed_Speed = m_original_Speed / 3f;
         speed = _Slowed_Speed;
 
         m_Attack_Speed_Cooldown = attack_Speed_Cooldown_Max;
@@ -332,6 +384,7 @@ public class Player_Behaviour : MonoBehaviour {
     void Tackle()
     {
         m_Is_Tackling = true;
+        m_Is_Attacking = true;
         m_Read_Player_Inputs = false;
         float _tackle_Speed = speed * tackle_Speed_Mod;
         speed = _tackle_Speed;
@@ -340,6 +393,7 @@ public class Player_Behaviour : MonoBehaviour {
     void Slide_Tackle()
     {
         m_Is_Slide_Tackling = true;
+        m_Is_Attacking = true;
         m_Read_Player_Inputs = false;
         float _tackle_Speed = speed * slide_Tackle_Speed_Mod;
         speed = _tackle_Speed;
@@ -362,8 +416,8 @@ public class Player_Behaviour : MonoBehaviour {
         {
             Vector3 dir_To_Team = accept_Teammates[i].transform.position - transform.position;
             float angle = Vector3.Angle(_dir, dir_To_Team);
-            
-            if (angle < 20f)
+
+            if (angle < Pass_Angle)
             {
                 Debug.Log("Found Match");
                 Debug.DrawRay(transform.position, dir_To_Team, Color.red);
@@ -372,8 +426,8 @@ public class Player_Behaviour : MonoBehaviour {
                     passable_Teammates.Add(accept_Teammates[i]);
                     return passable_Teammates[0].transform.position;
                 }
-                
-            }else if (angle > 20f && passable_Teammates.Contains(accept_Teammates[i]))
+
+            } else if (angle > Pass_Angle && passable_Teammates.Contains(accept_Teammates[i]))
             {
                 passable_Teammates.Remove(accept_Teammates[i]);
             }
@@ -421,7 +475,7 @@ public class Player_Behaviour : MonoBehaviour {
         }
         m_Owned_Ball.GetComponent<Rigidbody>().isKinematic = false;
         float _mag = 0;
-        
+
         if (passable_Teammates.Count > 0) {
             if (passable_Teammates.Count >= 2)
             {
@@ -434,35 +488,35 @@ public class Player_Behaviour : MonoBehaviour {
             }
             _mag = Vector3.Magnitude(passable_Teammates[0].transform.position - transform.position);
         }
-        Debug.Log("Dist: " + _mag );
+        Debug.Log("Dist: " + _mag);
 
         if ((passable_Teammates.Count <= 0 || _mag > pass_Range) && !m_Taking_Damage) {
             m_Owned_Ball.GetComponent<Rigidbody>().AddForce(transform.forward * ball_Force * m_speed_Modifier);
-        }else if(passable_Teammates.Count > 0 && _mag < pass_Range && !m_Taking_Damage)
+        } else if (passable_Teammates.Count > 0 && _mag < pass_Range && !m_Taking_Damage)
         {
             Physics.gravity = Vector3.up * -gravity;
             m_Owned_Ball.GetComponent<Rigidbody>().AddForce(Calc_Vel(), ForceMode.VelocityChange);
-           
+
             player_Controlled = false;
             passable_Teammates[0].player_Controlled = true;
-        }else if (m_Taking_Damage)
+        } else if (m_Taking_Damage)
         {
             Vector3 random_Dir = Vector3.zero;
             if (m_Wall_In_Damage_Dir()) {
                 damage_Dir *= -1;
-                random_Dir = new Vector3(damage_Dir.x + Random.Range(-0.4f, 0.4f), Random.Range(0f, 1f), damage_Dir.z + Random.Range(-0.4f, 0.4f));
-            }else
+                random_Dir = new Vector3(damage_Dir.x + Random.Range(-0.4f, 0.4f), Random.Range(0f, 0.5f), damage_Dir.z + Random.Range(-0.4f, 0.4f));
+            } else
             {
-                random_Dir = new Vector3(damage_Dir.x + Random.Range(-0.4f, 0.4f), Random.Range(0f, 2f), damage_Dir.z + Random.Range(-0.4f, 0.4f));
+                random_Dir = new Vector3(damage_Dir.x + Random.Range(-0.4f, 0.4f), Random.Range(0f, 0.5f), damage_Dir.z + Random.Range(-0.4f, 0.4f));
             }
-            float random_Force = Random.Range(ball_Force/2, ball_Force);
+            float random_Force = Random.Range(ball_Force / 2, ball_Force);
             m_Owned_Ball.GetComponent<Rigidbody>().AddForce((random_Dir) * random_Force);
         }
         m_Owned_Ball.GetComponent<Collider>().enabled = true;
         m_Owned_Ball.GetComponent<Ball_Effects>().Activate_Trail();
         m_Owned_Ball.GetComponent<Rigidbody>().useGravity = true;
         m_Owned_Ball.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.None;
-        
+
         m_Owned_Ball = null;
 
         if (passable_Teammates.Count > 0) {
@@ -484,13 +538,13 @@ public class Player_Behaviour : MonoBehaviour {
     public void Take_Damage(Vector3 _attacker_Pos, float _damage_Cooldown, bool _Is_Stealing)
     {
         damage_Dir = (_attacker_Pos - transform.position) * -1f;
-        
+
         float _damage_Speed = speed * tackle_Speed_Mod * 2f;
         speed = _damage_Speed;
         m_Taking_Damage = true;
         m_Read_Player_Inputs = false;
         damage_Cooldown_Max = _damage_Cooldown;
-        
+
         if (m_Owned_Ball != null) {
             if (!_Is_Stealing) {
                 Throw_Ball();
@@ -504,7 +558,7 @@ public class Player_Behaviour : MonoBehaviour {
         impact_PS.Play();
     }
 
-    
+
 
     //this calculation was made with the help of this youtube video https://www.youtube.com/watch?v=IvT8hjy6q4o
     Vector3 Calc_Vel()
@@ -512,16 +566,16 @@ public class Player_Behaviour : MonoBehaviour {
         float h = 0f;
         if (m_Is_Holding_Lob) {
             h = passable_Teammates[0].transform.position.y + lob_Pass_H_Offset;
-        }else
+        } else
         {
             h = passable_Teammates[0].transform.position.y + reg_Pass_H_Offset;
         }
         float displacementY = passable_Teammates[0].transform.position.y - m_Owned_Ball.transform.position.y;
-        
+
         Vector3 displacementXZ = new Vector3(passable_Teammates[0].transform.position.x - m_Owned_Ball.transform.position.x, 0,
-        passable_Teammates[0].transform.position.z - m_Owned_Ball.transform.position.z) 
+        passable_Teammates[0].transform.position.z - m_Owned_Ball.transform.position.z)
         + vel;
-        
+
         float _time = Mathf.Sqrt(-2 * h / -gravity) + Mathf.Sqrt(2 * (displacementY - h) / -gravity);
         Vector3 velocityY = Vector3.up * Mathf.Sqrt(-2 * -gravity * h);
         Vector3 velocityXZ = displacementXZ / _time;
@@ -536,7 +590,7 @@ public class Player_Behaviour : MonoBehaviour {
         if (other.gameObject.tag == "Ball" && other.gameObject.transform.parent == null && m_can_Catch_Ball)
         {
             Pick_Up_Ball(other.gameObject);
-            
+            team_Manager.Ball_Pickup(this.gameObject);
         }
 
 
@@ -547,13 +601,14 @@ public class Player_Behaviour : MonoBehaviour {
                 if (other.gameObject.GetComponent<Player_Behaviour>().m_Owned_Ball != null) {
                     other.gameObject.GetComponent<Player_Behaviour>().Swap_Possessor(this.gameObject);
                 }
-            }else if (m_Is_Slide_Tackling)
+                team_Manager.Ball_Pickup(this.gameObject);
+            } else if (m_Is_Slide_Tackling)
             {
                 other.gameObject.GetComponent<Player_Behaviour>().Take_Damage(transform.position, slide_Tackle_Damage_Cooldown, false);
                 m_can_Catch_Ball = false;
             }
 
-            
+
         }
 
         rb.velocity = Vector3.zero;
@@ -588,7 +643,7 @@ public class Player_Behaviour : MonoBehaviour {
         m_Owned_Ball.transform.position = Ball_Held_Pos.position;
         m_Owned_Ball.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeRotation;
         m_Owned_Ball.GetComponent<Rigidbody>().isKinematic = true;
-        
+
         m_Owned_Ball.GetComponent<Ball_Effects>().Deactivate_Trail();
         m_Owned_Ball.GetComponent<Ball_Effects>().Play_Catch_Kick();
         Camera_Behaviour.cam_Inst.Update_Target(this.transform);
@@ -608,7 +663,7 @@ public class Player_Behaviour : MonoBehaviour {
         }
         return false;
 
-        
+
     }
 
     bool m_Wall_In_Front()
@@ -637,13 +692,103 @@ public class Player_Behaviour : MonoBehaviour {
         return false;
     }
 
+    //check to see if there is a player to cover near the AI
+    bool m_Player_In_Prox()
+    {
+        Collider[] hit_Colliders = Physics.OverlapSphere(transform.position, m_Melee_Range);
+        int i = 0;
+        while (i < hit_Colliders.Length)
+        {
+            if (hit_Colliders[i].tag == "Player" && hit_Colliders[i].gameObject.GetComponent<Player_Behaviour>().Team_ID != Team_ID)
+            {
+                target_Pos = hit_Colliders[i].transform;
+                target_Vec = new Vector3(target_Pos.position.x, transform.position.y, target_Pos.position.y);
+                return true;
+            }
+            i++;
+        }
+
+        return false;
+    }
+
+    //check to see if the ball is near the AI
+    bool m_Ball_In_Prox()
+    {
+        RaycastHit hit;
+        if (Physics.SphereCast(transform.position, m_ball_Check_Radius, Vector3.down, out hit, ground_Ray_Dist))
+        {
+            if (hit.collider.tag == "Ball")
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    //check to see if the ball is in a "Maulable" range
+    bool m_In_Melee_Range()
+    {
+        Collider[] hit_Colliders = Physics.OverlapSphere(transform.position, m_Melee_Range);
+        int i = 0;
+        while (i < hit_Colliders.Length)
+        {
+            if (hit_Colliders[i].tag == "Player" && hit_Colliders[i].gameObject.GetComponent<Player_Behaviour>().m_Owned_Ball != null)
+            {
+                target_Pos = hit_Colliders[i].transform;
+                target_Vec = new Vector3(target_Pos.position.x, transform.position.y, target_Pos.position.y);
+                return true;
+            }
+            i++;
+        }
+
+        return false;
+    }
+
+
+    public void Random_Target_Pos(Transform _target_Transform)
+    {
+        target_Pos = _target_Transform;
+        saved_Target_Pos = _target_Transform;
+        target_Vec = new Vector3(Random.Range(target_Pos.position.x, enemy_Goal.transform.position.x), 0, Random.Range(min_Z, max_Z));
+        current_Status = status.ATTACK;
+    }
+
+    public void Defend_Goal_Pos()
+    {
+        target_Vec = goal.transform.position + (new Vector3(Random.insideUnitSphere.x,
+            0, Random.insideUnitSphere.z) * random_Offset);
+        current_Status = status.DEFEND;
+        
+    }
+
+    public void Set_Min_Max(float _min_Z, float _max_Z)
+    {
+        min_Z = _min_Z;
+        max_Z = _max_Z;
+    }
+
+    /// <summary>
+    /// Update the current transform that the AI will be going for.
+    /// </summary>
+    /// <param name="_target_Transform"></param>
+    public void Update_Target_Pos(Transform _target_Transform)
+    {
+        target_Pos = _target_Transform;
+        m_random_Offset = new Vector3(Random.Range(-random_Offset, random_Offset),
+            m_random_Offset.y, Random.Range(-random_Offset, random_Offset));
+        
+    }
+
     ///////////////////////////////// GIZMO DRAWS
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position + Vector3.down * ground_Ray_Dist, ground_Ray_Rad);
+        Gizmos.DrawWireSphere(transform.position + Vector3.down * ground_Ray_Dist, m_Melee_Range);
         Gizmos.DrawRay(transform.position, damage_Dir);
         Gizmos.color = Color.cyan;
         Gizmos.DrawWireSphere(transform.position + transform.forward * ground_Ray_Dist, ground_Ray_Rad);
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(transform.position + Vector3.down * ground_Ray_Dist, m_ball_Check_Radius);
     }
 }

@@ -43,7 +43,7 @@ Material:
     - _Depth_Distance: 1.8
     - _Depth_Intensity: 0.196
     - _Fresnel_Power: 1.84
-    - _Opacity: 0.69
+    - _Opacity: 0.8
     - _RimOffset: 0.24
     - _RimPower: 0.5
     - _Scale: 6.8

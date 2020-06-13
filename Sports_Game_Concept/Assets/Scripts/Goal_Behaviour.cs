@@ -24,6 +24,8 @@ public class Goal_Behaviour : MonoBehaviour {
         {
             health_Text.gameObject.name = "Goal" +team_ID+ "Text";
         }
+
+
     }
 	
 	// Update is called once per frame
@@ -56,7 +58,7 @@ public class Goal_Behaviour : MonoBehaviour {
         health_Text.gameObject.SetActive(false);
     }
 
-    void Reset_Timer()
+    public void Reset_Timer()
     {
         Debug.Log("Resetting Timer");
         m_Current_Used_Time = 0;
