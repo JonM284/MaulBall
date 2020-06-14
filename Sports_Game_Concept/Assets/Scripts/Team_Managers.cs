@@ -16,6 +16,7 @@ public class Team_Managers : MonoBehaviour {
     public List<Player_Behaviour> teammates, enemy_Team;
     public List<Goal_Behaviour> goals;
     public Goal_Behaviour enemy_Goal;
+    public Ball_Effects ball_Ref;
     public GameObject first_Target;
     public Status current_Status;
     public Transform max_Z, min_Z;
@@ -56,6 +57,8 @@ public class Team_Managers : MonoBehaviour {
             teammates[i].goal = goals[0];
             teammates[i].enemy_Goal = enemy_Goal;
             teammates[i].Set_Min_Max(min_Z.position.z, max_Z.position.z);
+            teammates[i].ball_reference = ball_Ref;
+            
             if (teammates[i].player_Controlled)
             {
                 first_Target = teammates[i].gameObject;
@@ -79,7 +82,7 @@ public class Team_Managers : MonoBehaviour {
 
         for (int i = 0; i < enemy_Team.Count; i++)
         {
-            enemy_Team[i].Defend_Goal_Pos();
+            enemy_Team[i].Defend_Goal_Pos(_sending_Gameobject.transform);
         }
     }
 

@@ -32,6 +32,7 @@ public class Player_Behaviour : MonoBehaviour {
 
     [HideInInspector]public Team_Managers team_Manager;
     [HideInInspector]public Goal_Behaviour goal, enemy_Goal;
+    [HideInInspector]public Ball_Effects ball_reference;
 
     private Rigidbody rb;
     private float m_speed_Modifier = 1;
@@ -59,7 +60,8 @@ public class Player_Behaviour : MonoBehaviour {
     {
         IDLE,
         ATTACK,
-        DEFEND 
+        DEFEND, 
+        BALL
     }
 
     public status current_Status;
@@ -133,10 +135,21 @@ public class Player_Behaviour : MonoBehaviour {
                 }
                 else
                 {
-                    Defend_Goal_Pos();
+                    Defend_Goal_Pos(target_Pos);
                 }
             } else if (current_Status == status.DEFEND && m_In_Melee_Range() && !m_Is_Attacking && !m_Has_Attacked && !m_Taking_Damage) {
+                Vector3 _dir_To_Target = target_Vec - transform.position;
+                Vector3 _Norm_Dir = _dir_To_Target.normalized;
+                m_Horizontal_Comp = _Norm_Dir.x;
+                m_Vertical_Comp = _Norm_Dir.z;
                 Slide_Tackle();
+            } else if (m_Ball_In_Prox() && !m_Taking_Damage) {
+                if (target_Pos != ball_reference) target_Pos = ball_reference.transform;
+                if (current_Status != status.BALL) current_Status = status.BALL;
+                Vector3 _dir_To_Target = target_Vec - transform.position;
+                Vector3 _Norm_Dir = _dir_To_Target.normalized;
+                m_Horizontal_Comp = _Norm_Dir.x;
+                m_Vertical_Comp = _Norm_Dir.z;
             } else
             {
                 m_Horizontal_Comp = 0;
@@ -172,9 +185,9 @@ public class Player_Behaviour : MonoBehaviour {
         }
 
 
-        m_speed_Modifier = (m_Player.GetButtonLongPressDown("Sprint") && m_Owned_Ball != null) ? sprint_speed_Mod : 1;
+        m_speed_Modifier = (m_Player.GetButton("Sprint") && m_Owned_Ball != null) ? sprint_speed_Mod : 1;
         if (running_Trail != null) {
-            running_Trail.enabled = (m_Player.GetButtonLongPressDown("Sprint") && m_Owned_Ball != null) ? true : false;
+            running_Trail.enabled = (m_Player.GetButton("Sprint") && m_Owned_Ball != null) ? true : false;
         }
 
 
@@ -386,7 +399,7 @@ public class Player_Behaviour : MonoBehaviour {
         m_Is_Tackling = true;
         m_Is_Attacking = true;
         m_Read_Player_Inputs = false;
-        float _tackle_Speed = speed * tackle_Speed_Mod;
+        float _tackle_Speed = m_original_Speed * tackle_Speed_Mod;
         speed = _tackle_Speed;
     }
 
@@ -395,7 +408,7 @@ public class Player_Behaviour : MonoBehaviour {
         m_Is_Slide_Tackling = true;
         m_Is_Attacking = true;
         m_Read_Player_Inputs = false;
-        float _tackle_Speed = speed * slide_Tackle_Speed_Mod;
+        float _tackle_Speed = m_original_Speed * slide_Tackle_Speed_Mod;
         speed = _tackle_Speed;
     }
 
@@ -539,7 +552,7 @@ public class Player_Behaviour : MonoBehaviour {
     {
         damage_Dir = (_attacker_Pos - transform.position) * -1f;
 
-        float _damage_Speed = speed * tackle_Speed_Mod * 2f;
+        float _damage_Speed = m_original_Speed * tackle_Speed_Mod * 2f;
         speed = _damage_Speed;
         m_Taking_Damage = true;
         m_Read_Player_Inputs = false;
@@ -606,6 +619,7 @@ public class Player_Behaviour : MonoBehaviour {
             {
                 other.gameObject.GetComponent<Player_Behaviour>().Take_Damage(transform.position, slide_Tackle_Damage_Cooldown, false);
                 m_can_Catch_Ball = false;
+                
             }
 
 
@@ -714,13 +728,17 @@ public class Player_Behaviour : MonoBehaviour {
     //check to see if the ball is near the AI
     bool m_Ball_In_Prox()
     {
-        RaycastHit hit;
-        if (Physics.SphereCast(transform.position, m_ball_Check_Radius, Vector3.down, out hit, ground_Ray_Dist))
+        Collider[] hit_Colliders = Physics.OverlapSphere(transform.position, m_ball_Check_Radius);
+        int i = 0;
+        while (i < hit_Colliders.Length)
         {
-            if (hit.collider.tag == "Ball")
+            if (hit_Colliders[i].tag == "Ball")
             {
+                target_Pos = hit_Colliders[i].transform;
+                target_Vec = new Vector3(target_Pos.position.x, transform.position.y, target_Pos.position.y);
                 return true;
             }
+            i++;
         }
         return false;
     }
@@ -753,12 +771,26 @@ public class Player_Behaviour : MonoBehaviour {
         current_Status = status.ATTACK;
     }
 
-    public void Defend_Goal_Pos()
+    public void Defend_Goal_Pos(Transform _target_Transform)
     {
-        target_Vec = goal.transform.position + (new Vector3(Random.insideUnitSphere.x,
-            0, Random.insideUnitSphere.z) * random_Offset);
+        target_Pos = _target_Transform;
+        saved_Target_Pos = _target_Transform;
+        target_Vec = target_Pos.transform.position + (new Vector3(Random.insideUnitSphere.x,
+            0, Random.insideUnitSphere.z) * random_Offset/1.5f);
+        if (target_Vec.z <= min_Z || target_Vec.z >= max_Z)
+        {
+            Debug.Log("Z position was outside of arena");
+            Defend_Goal_Pos(_target_Transform);
+        }
         current_Status = status.DEFEND;
         
+    }
+
+    public void Go_To_Ball()
+    {
+        target_Pos = ball_reference.transform;
+        target_Vec = target_Pos.transform.position;
+        current_Status = status.BALL;
     }
 
     public void Set_Min_Max(float _min_Z, float _max_Z)
