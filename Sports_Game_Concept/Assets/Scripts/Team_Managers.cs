@@ -77,12 +77,25 @@ public class Team_Managers : MonoBehaviour {
     {
         for (int i = 0; i < teammates.Count; i++)
         {
-            teammates[i].Random_Target_Pos(_sending_Gameobject.transform);
+            teammates[i].Random_Target_Pos(enemy_Team[i].transform);
         }
 
         for (int i = 0; i < enemy_Team.Count; i++)
         {
-            enemy_Team[i].Defend_Goal_Pos(_sending_Gameobject.transform);
+            enemy_Team[i].Defend_Goal_Pos(teammates[i].transform);
+        }
+    }
+
+    public void Ball_Drop()
+    {
+        for (int i = 0; i < teammates.Count; i++)
+        {
+            teammates[i].Go_To_Ball();
+        }
+
+        for (int i = 0; i < enemy_Team.Count; i++)
+        {
+            enemy_Team[i].Go_To_Ball();
         }
     }
 

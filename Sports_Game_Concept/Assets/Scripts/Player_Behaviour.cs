@@ -142,14 +142,29 @@ public class Player_Behaviour : MonoBehaviour {
                 Vector3 _Norm_Dir = _dir_To_Target.normalized;
                 m_Horizontal_Comp = _Norm_Dir.x;
                 m_Vertical_Comp = _Norm_Dir.z;
+                transform.forward = _dir_To_Target;
                 Slide_Tackle();
-            } else if (m_Ball_In_Prox() && !m_Taking_Damage) {
-                if (target_Pos != ball_reference) target_Pos = ball_reference.transform;
-                if (current_Status != status.BALL) current_Status = status.BALL;
-                Vector3 _dir_To_Target = target_Vec - transform.position;
-                Vector3 _Norm_Dir = _dir_To_Target.normalized;
-                m_Horizontal_Comp = _Norm_Dir.x;
-                m_Vertical_Comp = _Norm_Dir.z;
+            } else if (current_Status == status.BALL) {
+                if (m_Ball_In_Prox() && !m_Taking_Damage){
+                    target_Vec = target_Pos.position;
+                    Vector3 _dir_To_Target = target_Vec - transform.position;
+                    Vector3 _Norm_Dir = _dir_To_Target.normalized;
+                    m_Horizontal_Comp = _Norm_Dir.x;
+                    m_Vertical_Comp = _Norm_Dir.z;
+                }else if(!m_Ball_In_Prox() && !m_Taking_Damage)
+                {
+                    if (Vector3.Magnitude(target_Vec - transform.position) > 4)
+                {
+                    Vector3 _dir_To_Target = target_Vec - transform.position;
+                    Vector3 _Norm_Dir = _dir_To_Target.normalized;
+                    m_Horizontal_Comp = _Norm_Dir.x;
+                    m_Vertical_Comp = _Norm_Dir.z;
+                }
+                    else
+                {
+                    Defend_Goal_Pos(target_Pos);
+                }
+                }
             } else
             {
                 m_Horizontal_Comp = 0;
@@ -561,6 +576,7 @@ public class Player_Behaviour : MonoBehaviour {
         if (m_Owned_Ball != null) {
             if (!_Is_Stealing) {
                 Throw_Ball();
+                team_Manager.Ball_Drop();
             }
             Camera_Behaviour.cam_Inst.Do_Camera_Shake(0.3f, 0.6f);
         }
@@ -628,7 +644,14 @@ public class Player_Behaviour : MonoBehaviour {
         rb.velocity = Vector3.zero;
     }
 
-
+    private void OnCollisionStay(Collision other)
+    {
+        if (other.gameObject.tag == "Ball" && other.gameObject.transform.parent == null && m_can_Catch_Ball)
+        {
+            Pick_Up_Ball(other.gameObject);
+            team_Manager.Ball_Pickup(this.gameObject);
+        }
+    }
 
     private void OnCollisionExit(Collision collision)
     {
@@ -683,7 +706,7 @@ public class Player_Behaviour : MonoBehaviour {
     bool m_Wall_In_Front()
     {
         RaycastHit hit;
-        if (Physics.SphereCast(transform.position, ground_Ray_Rad, transform.forward, out hit, ground_Ray_Dist))
+        if (Physics.SphereCast(transform.position, ground_Ray_Rad * 1.5f, transform.forward, out hit, ground_Ray_Dist))
         {
             if (hit.collider.tag == "Wall")
             {
@@ -752,8 +775,7 @@ public class Player_Behaviour : MonoBehaviour {
         {
             if (hit_Colliders[i].tag == "Player" && hit_Colliders[i].gameObject.GetComponent<Player_Behaviour>().m_Owned_Ball != null)
             {
-                target_Pos = hit_Colliders[i].transform;
-                target_Vec = new Vector3(target_Pos.position.x, transform.position.y, target_Pos.position.y);
+                Direct_Enemy_Target(hit_Colliders[i].transform);
                 return true;
             }
             i++;
@@ -762,6 +784,13 @@ public class Player_Behaviour : MonoBehaviour {
         return false;
     }
 
+    public void Direct_Enemy_Target(Transform _target_Transform)
+    {
+        target_Pos = _target_Transform;
+        saved_Target_Pos = _target_Transform;
+        Debug.Log("Now updated to be player position");
+        target_Vec = target_Pos.transform.position;
+    }
 
     public void Random_Target_Pos(Transform _target_Transform)
     {
@@ -819,7 +848,7 @@ public class Player_Behaviour : MonoBehaviour {
         Gizmos.DrawWireSphere(transform.position + Vector3.down * ground_Ray_Dist, m_Melee_Range);
         Gizmos.DrawRay(transform.position, damage_Dir);
         Gizmos.color = Color.cyan;
-        Gizmos.DrawWireSphere(transform.position + transform.forward * ground_Ray_Dist, ground_Ray_Rad);
+        Gizmos.DrawWireSphere(transform.position + transform.forward * ground_Ray_Dist, ground_Ray_Rad * 1.5f);
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position + Vector3.down * ground_Ray_Dist, m_ball_Check_Radius);
     }
