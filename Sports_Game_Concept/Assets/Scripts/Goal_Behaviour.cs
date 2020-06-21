@@ -10,7 +10,6 @@ public class Goal_Behaviour : MonoBehaviour {
     public int team_ID;
     public float time_To_Score;
     public Transform[] spawn_Zones;
-    public TMP_Text health_Text;
     
 
     private bool m_Ball_In_Zone = false;
@@ -20,10 +19,7 @@ public class Goal_Behaviour : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
-        if (health_Text != null)
-        {
-            health_Text.gameObject.name = "Goal" +team_ID+ "Text";
-        }
+       
 
 
     }
@@ -40,24 +36,12 @@ public class Goal_Behaviour : MonoBehaviour {
             Add_Score();
         }
 
-        if (health_Text != null) {
-            int _health_Amount = Mathf.RoundToInt(time_To_Score) - Mathf.CeilToInt(m_Current_Used_Time);
-            health_Text.text = _health_Amount.ToString();
-        }
+        
 	}
 
    
 
-    private void OnBecameVisible()
-    {
-        health_Text.gameObject.SetActive(true);
-    }
-
-    private void OnBecameInvisible()
-    {
-        health_Text.gameObject.SetActive(false);
-    }
-
+    
     public void Reset_Timer()
     {
         Debug.Log("Resetting Timer");
@@ -86,7 +70,7 @@ public class Goal_Behaviour : MonoBehaviour {
 
     private void OnTriggerStay(Collider other)
     {
-        if (other.gameObject.tag == "Player" && other.gameObject.GetComponent<Player_Behaviour>().m_Owned_Ball != null)
+        if (other.gameObject.tag == "Player" && other.gameObject.GetComponent<Player_Behaviour>().m_Owned_Ball != null && other.gameObject.GetComponent<Player_Behaviour>().Team_ID != this.team_ID)
         {
             m_Ball_In_Zone = true;
         }

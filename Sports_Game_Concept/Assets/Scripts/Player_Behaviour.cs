@@ -33,12 +33,13 @@ public class Player_Behaviour : MonoBehaviour {
     [HideInInspector]public Team_Managers team_Manager;
     [HideInInspector]public Goal_Behaviour goal, enemy_Goal;
     [HideInInspector]public Ball_Effects ball_reference;
+    [HideInInspector]public UI_Follower my_Indicator;
 
     private Rigidbody rb;
     private float m_speed_Modifier = 1;
     private Vector3 rayDir;
     private float m_Input_X, m_Input_Y, m_Horizontal_Comp, m_Vertical_Comp, m_anti_Bump_Factor = 0.75f;
-    private float min_Z, max_Z;
+    private float min_Z, max_Z, min_X, max_X;
     private float m_Ball_Throw_Cooldown = 0.5f, m_Orig_Cooldown, m_Tackle_Duration, m_Slide_Tackle_Duration
         , m_original_Speed, m_Attack_Speed_Cooldown = 1f, m_Time_To_Reach, m_Damage_Cooldown, m_DC_Max_Original, m_Electric_Damage_Cooldown, 
         m_orig_attack_Cooldown;
@@ -77,13 +78,17 @@ public class Player_Behaviour : MonoBehaviour {
         }
 
         impact_PS = transform.Find("Hit_Effect").GetComponent<ParticleSystem>();
-       
+
+        if (!player_Controlled)
+        {
+            Player_ID = 8;
+        }
     }
 
     // Use this for initialization
     void Start() {
         rb = GetComponent<Rigidbody>();
-        m_Player = ReInput.players.GetPlayer(Player_ID - 1);
+        m_Player = ReInput.players.GetPlayer(Player_ID-1);
         m_Orig_Cooldown = m_Ball_Throw_Cooldown;
         m_original_Speed = speed;
         m_Attack_Speed_Cooldown = attack_Speed_Cooldown_Max;
@@ -114,6 +119,7 @@ public class Player_Behaviour : MonoBehaviour {
             m_Vertical_Comp = m_Player.GetAxisRaw("Vertical");
         } else
         {
+            Debug.Log(gameObject.name + ": not moving");
             if (current_Status == status.ATTACK) {
 
                 if (Vector3.Magnitude(target_Vec - transform.position) > 4) {
@@ -480,6 +486,11 @@ public class Player_Behaviour : MonoBehaviour {
         if (passable_Teammates.Count > 0) {
             player_Controlled = false;
             passable_Teammates[0].player_Controlled = true;
+            passable_Teammates[0].Player_ID = this.Player_ID;
+            passable_Teammates[0].Update_Player_ID();
+            my_Indicator.Change_Target(passable_Teammates[0].gameObject);
+            Player_ID = 8;
+            Update_Player_ID();
         }
 
         if (passable_Teammates.Count > 0)
@@ -527,6 +538,11 @@ public class Player_Behaviour : MonoBehaviour {
 
             player_Controlled = false;
             passable_Teammates[0].player_Controlled = true;
+            passable_Teammates[0].Player_ID = this.Player_ID;
+            passable_Teammates[0].Update_Player_ID();
+            my_Indicator.Change_Target(passable_Teammates[0].gameObject);
+            Player_ID = 8;
+            Update_Player_ID();
         } else if (m_Taking_Damage)
         {
             Vector3 random_Dir = Vector3.zero;
@@ -616,7 +632,7 @@ public class Player_Behaviour : MonoBehaviour {
 
     private void OnCollisionEnter(Collision other)
     {
-        if (other.gameObject.tag == "Ball" && other.gameObject.transform.parent == null && m_can_Catch_Ball)
+        if (other.gameObject.tag == "Ball" && other.gameObject.transform.parent == null && m_can_Catch_Ball && !m_Taking_Damage)
         {
             Pick_Up_Ball(other.gameObject);
             team_Manager.Ball_Pickup(this.gameObject);
@@ -646,7 +662,7 @@ public class Player_Behaviour : MonoBehaviour {
 
     private void OnCollisionStay(Collision other)
     {
-        if (other.gameObject.tag == "Ball" && other.gameObject.transform.parent == null && m_can_Catch_Ball)
+        if (other.gameObject.tag == "Ball" && other.gameObject.transform.parent == null && m_can_Catch_Ball && !m_Taking_Damage)
         {
             Pick_Up_Ball(other.gameObject);
             team_Manager.Ball_Pickup(this.gameObject);
@@ -668,9 +684,17 @@ public class Player_Behaviour : MonoBehaviour {
 
         for (int i = 0; i < accept_Teammates.Count; i++)
         {
-            if (accept_Teammates[i].player_Controlled)
+            if (Player_ID == 8)
             {
-                accept_Teammates[i].player_Controlled = false;
+                if (accept_Teammates[i].Player_ID != 8 && accept_Teammates[i].player_Controlled && accept_Teammates[i].my_Indicator != null)
+                {
+                    Player_ID = accept_Teammates[i].Player_ID;
+                    Update_Player_ID();
+                    accept_Teammates[i].Player_ID = 8;
+                    accept_Teammates[i].Update_Player_ID();
+                    accept_Teammates[i].player_Controlled = false;
+                    accept_Teammates[i].my_Indicator.Change_Target(this.gameObject);
+                }
             }
         }
         m_Owned_Ball = other.gameObject;
@@ -784,6 +808,11 @@ public class Player_Behaviour : MonoBehaviour {
         return false;
     }
 
+    public void Update_Player_ID()
+    {
+        m_Player = ReInput.players.GetPlayer(Player_ID - 1);
+    }
+
     public void Direct_Enemy_Target(Transform _target_Transform)
     {
         target_Pos = _target_Transform;
@@ -806,7 +835,7 @@ public class Player_Behaviour : MonoBehaviour {
         saved_Target_Pos = _target_Transform;
         target_Vec = target_Pos.transform.position + (new Vector3(Random.insideUnitSphere.x,
             0, Random.insideUnitSphere.z) * random_Offset/1.5f);
-        if (target_Vec.z <= min_Z || target_Vec.z >= max_Z)
+        if ((target_Vec.z <= min_Z || target_Vec.z >= max_Z) || (target_Vec.x <= min_X || target_Vec.x >= max_X))
         {
             Debug.Log("Z position was outside of arena");
             Defend_Goal_Pos(_target_Transform);
@@ -822,11 +851,14 @@ public class Player_Behaviour : MonoBehaviour {
         current_Status = status.BALL;
     }
 
-    public void Set_Min_Max(float _min_Z, float _max_Z)
+    public void Set_Min_Max(float _min_Z, float _max_Z, float _min_X, float _max_X)
     {
         min_Z = _min_Z;
         max_Z = _max_Z;
+        min_X = _min_X;
+        max_X = _max_X;
     }
+
 
     /// <summary>
     /// Update the current transform that the AI will be going for.

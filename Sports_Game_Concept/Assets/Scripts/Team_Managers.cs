@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
 
 public class Team_Managers : MonoBehaviour {
 
@@ -19,7 +20,8 @@ public class Team_Managers : MonoBehaviour {
     public Ball_Effects ball_Ref;
     public GameObject first_Target;
     public Status current_Status;
-    public Transform max_Z, min_Z;
+    public Transform max_Z, min_Z, min_X, max_X;
+    
 
     private void Awake()
     {
@@ -56,7 +58,7 @@ public class Team_Managers : MonoBehaviour {
             teammates[i].team_Manager = this;
             teammates[i].goal = goals[0];
             teammates[i].enemy_Goal = enemy_Goal;
-            teammates[i].Set_Min_Max(min_Z.position.z, max_Z.position.z);
+            teammates[i].Set_Min_Max(min_Z.position.z, max_Z.position.z, min_X.position.x, max_X.position.x);
             teammates[i].ball_reference = ball_Ref;
             
             if (teammates[i].player_Controlled)
