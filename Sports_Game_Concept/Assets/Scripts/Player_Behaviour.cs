@@ -119,63 +119,7 @@ public class Player_Behaviour : MonoBehaviour {
             m_Vertical_Comp = m_Player.GetAxisRaw("Vertical");
         } else
         {
-            Debug.Log(gameObject.name + ": not moving");
-            if (current_Status == status.ATTACK) {
-
-                if (Vector3.Magnitude(target_Vec - transform.position) > 4) {
-                    Vector3 _dir_To_Target = target_Vec - transform.position;
-                    Vector3 _Norm_Dir = _dir_To_Target.normalized;
-                    m_Horizontal_Comp = _Norm_Dir.x;
-                    m_Vertical_Comp = _Norm_Dir.z;
-                } else
-                {
-                    Random_Target_Pos(target_Pos);
-                }
-            } else if (current_Status == status.DEFEND && !m_In_Melee_Range() && !m_Taking_Damage) {
-                if (Vector3.Magnitude(target_Vec - transform.position) > 4)
-                {
-                    Vector3 _dir_To_Target = target_Vec - transform.position;
-                    Vector3 _Norm_Dir = _dir_To_Target.normalized;
-                    m_Horizontal_Comp = _Norm_Dir.x;
-                    m_Vertical_Comp = _Norm_Dir.z;
-                }
-                else
-                {
-                    Defend_Goal_Pos(target_Pos);
-                }
-            } else if (current_Status == status.DEFEND && m_In_Melee_Range() && !m_Is_Attacking && !m_Has_Attacked && !m_Taking_Damage) {
-                Vector3 _dir_To_Target = target_Vec - transform.position;
-                Vector3 _Norm_Dir = _dir_To_Target.normalized;
-                m_Horizontal_Comp = _Norm_Dir.x;
-                m_Vertical_Comp = _Norm_Dir.z;
-                transform.forward = _dir_To_Target;
-                Slide_Tackle();
-            } else if (current_Status == status.BALL) {
-                if (m_Ball_In_Prox() && !m_Taking_Damage){
-                    target_Vec = target_Pos.position;
-                    Vector3 _dir_To_Target = target_Vec - transform.position;
-                    Vector3 _Norm_Dir = _dir_To_Target.normalized;
-                    m_Horizontal_Comp = _Norm_Dir.x;
-                    m_Vertical_Comp = _Norm_Dir.z;
-                }else if(!m_Ball_In_Prox() && !m_Taking_Damage)
-                {
-                    if (Vector3.Magnitude(target_Vec - transform.position) > 4)
-                {
-                    Vector3 _dir_To_Target = target_Vec - transform.position;
-                    Vector3 _Norm_Dir = _dir_To_Target.normalized;
-                    m_Horizontal_Comp = _Norm_Dir.x;
-                    m_Vertical_Comp = _Norm_Dir.z;
-                }
-                    else
-                {
-                    Defend_Goal_Pos(target_Pos);
-                }
-                }
-            } else
-            {
-                m_Horizontal_Comp = 0;
-                m_Vertical_Comp = 0;
-            }
+            AI_Movement();
         }
 
         Check_Inputs();
@@ -446,24 +390,49 @@ public class Player_Behaviour : MonoBehaviour {
 
     Vector3 Find_Players_In_Range(Vector3 _dir)
     {
-        for (int i = 0; i < accept_Teammates.Count; i++)
-        {
-            Vector3 dir_To_Team = accept_Teammates[i].transform.position - transform.position;
-            float angle = Vector3.Angle(_dir, dir_To_Team);
-
-            if (angle < Pass_Angle)
+        if (m_Owned_Ball != null) {
+            for (int i = 0; i < accept_Teammates.Count; i++)
             {
-                Debug.Log("Found Match");
-                Debug.DrawRay(transform.position, dir_To_Team, Color.red);
-                if (!passable_Teammates.Contains(accept_Teammates[i]))
+                Vector3 dir_To_Team = accept_Teammates[i].transform.position - transform.position;
+                float angle = Vector3.Angle(_dir, dir_To_Team);
+
+                if (angle < Pass_Angle)
                 {
-                    passable_Teammates.Add(accept_Teammates[i]);
-                    return passable_Teammates[0].transform.position;
-                }
+                    Debug.Log("Found Match");
+                    Debug.DrawRay(transform.position, dir_To_Team, Color.red);
+                    if (!passable_Teammates.Contains(accept_Teammates[i]))
+                    {
+                        passable_Teammates.Add(accept_Teammates[i]);
+                        return passable_Teammates[0].transform.position;
+                    }
 
-            } else if (angle > Pass_Angle && passable_Teammates.Contains(accept_Teammates[i]))
+                } else if (angle > Pass_Angle && passable_Teammates.Contains(accept_Teammates[i]))
+                {
+                    passable_Teammates.Remove(accept_Teammates[i]);
+                }
+            }
+        }else
+        {
+            for (int i = 0; i < accept_Teammates.Count; i++)
             {
-                passable_Teammates.Remove(accept_Teammates[i]);
+                Vector3 dir_To_Team = accept_Teammates[i].transform.position - transform.position;
+                float angle = Vector3.Angle(_dir, dir_To_Team);
+
+                if (angle < Pass_Angle && !accept_Teammates[i].player_Controlled)
+                {
+                    Debug.Log("Found Match");
+                    Debug.DrawRay(transform.position, dir_To_Team, Color.red);
+                    if (!passable_Teammates.Contains(accept_Teammates[i]))
+                    {
+                        passable_Teammates.Add(accept_Teammates[i]);
+                        return passable_Teammates[0].transform.position;
+                    }
+
+                }
+                else if (angle > Pass_Angle && passable_Teammates.Contains(accept_Teammates[i]))
+                {
+                    passable_Teammates.Remove(accept_Teammates[i]);
+                }
             }
         }
 
@@ -489,6 +458,7 @@ public class Player_Behaviour : MonoBehaviour {
             passable_Teammates[0].Player_ID = this.Player_ID;
             passable_Teammates[0].Update_Player_ID();
             my_Indicator.Change_Target(passable_Teammates[0].gameObject);
+            my_Indicator = null;
             Player_ID = 8;
             Update_Player_ID();
         }
@@ -536,13 +506,17 @@ public class Player_Behaviour : MonoBehaviour {
             Physics.gravity = Vector3.up * -gravity;
             m_Owned_Ball.GetComponent<Rigidbody>().AddForce(Calc_Vel(), ForceMode.VelocityChange);
 
-            player_Controlled = false;
-            passable_Teammates[0].player_Controlled = true;
-            passable_Teammates[0].Player_ID = this.Player_ID;
-            passable_Teammates[0].Update_Player_ID();
-            my_Indicator.Change_Target(passable_Teammates[0].gameObject);
-            Player_ID = 8;
-            Update_Player_ID();
+            
+            if (!passable_Teammates[0].player_Controlled && passable_Teammates[0].my_Indicator == null) {
+                player_Controlled = false;
+                passable_Teammates[0].player_Controlled = true;
+                passable_Teammates[0].Player_ID = this.Player_ID;
+                passable_Teammates[0].Update_Player_ID();
+                my_Indicator.Change_Target(passable_Teammates[0].gameObject);
+                my_Indicator = null;
+                Player_ID = 8;
+                Update_Player_ID();
+            }
         } else if (m_Taking_Damage)
         {
             Vector3 random_Dir = Vector3.zero;
@@ -693,7 +667,9 @@ public class Player_Behaviour : MonoBehaviour {
                     accept_Teammates[i].Player_ID = 8;
                     accept_Teammates[i].Update_Player_ID();
                     accept_Teammates[i].player_Controlled = false;
+                    my_Indicator = accept_Teammates[i].my_Indicator;
                     accept_Teammates[i].my_Indicator.Change_Target(this.gameObject);
+                    accept_Teammates[i].my_Indicator = null;
                 }
             }
         }
@@ -859,6 +835,78 @@ public class Player_Behaviour : MonoBehaviour {
         max_X = _max_X;
     }
 
+
+    void AI_Movement()
+    {
+        if (current_Status == status.ATTACK)
+        {
+
+            if (Vector3.Magnitude(target_Vec - transform.position) > 4)
+            {
+                Vector3 _dir_To_Target = target_Vec - transform.position;
+                Vector3 _Norm_Dir = _dir_To_Target.normalized;
+                m_Horizontal_Comp = _Norm_Dir.x;
+                m_Vertical_Comp = _Norm_Dir.z;
+            }
+            else
+            {
+                Random_Target_Pos(target_Pos);
+            }
+        }
+        else if (current_Status == status.DEFEND && !m_In_Melee_Range() && !m_Taking_Damage)
+        {
+            if (Vector3.Magnitude(target_Vec - transform.position) > 4)
+            {
+                Vector3 _dir_To_Target = target_Vec - transform.position;
+                Vector3 _Norm_Dir = _dir_To_Target.normalized;
+                m_Horizontal_Comp = _Norm_Dir.x;
+                m_Vertical_Comp = _Norm_Dir.z;
+            }
+            else
+            {
+                Defend_Goal_Pos(target_Pos);
+            }
+        }
+        else if (current_Status == status.DEFEND && m_In_Melee_Range() && !m_Is_Attacking && !m_Has_Attacked && !m_Taking_Damage)
+        {
+            Vector3 _dir_To_Target = target_Vec - transform.position;
+            Vector3 _Norm_Dir = _dir_To_Target.normalized;
+            m_Horizontal_Comp = _Norm_Dir.x;
+            m_Vertical_Comp = _Norm_Dir.z;
+            transform.forward = _dir_To_Target;
+            Slide_Tackle();
+        }
+        else if (current_Status == status.BALL)
+        {
+            if (m_Ball_In_Prox() && !m_Taking_Damage)
+            {
+                target_Vec = target_Pos.position;
+                Vector3 _dir_To_Target = target_Vec - transform.position;
+                Vector3 _Norm_Dir = _dir_To_Target.normalized;
+                m_Horizontal_Comp = _Norm_Dir.x;
+                m_Vertical_Comp = _Norm_Dir.z;
+            }
+            else if (!m_Ball_In_Prox() && !m_Taking_Damage)
+            {
+                if (Vector3.Magnitude(target_Vec - transform.position) > 4)
+                {
+                    Vector3 _dir_To_Target = target_Vec - transform.position;
+                    Vector3 _Norm_Dir = _dir_To_Target.normalized;
+                    m_Horizontal_Comp = _Norm_Dir.x;
+                    m_Vertical_Comp = _Norm_Dir.z;
+                }
+                else
+                {
+                    Defend_Goal_Pos(target_Pos);
+                }
+            }
+        }
+        else
+        {
+            m_Horizontal_Comp = 0;
+            m_Vertical_Comp = 0;
+        }
+    }
 
     /// <summary>
     /// Update the current transform that the AI will be going for.

@@ -28,6 +28,14 @@ public class UI_Manager : MonoBehaviour {
                 All_Indicators.Remove(All_Indicators[0]);
             }
         }
+
+        if (All_Indicators.Count > 0)
+        {
+            for (int i = 0; i < All_Indicators.Count; i++)
+            {
+                All_Indicators[i].gameObject.SetActive(false);
+            }
+        }
     }
 	
 	
