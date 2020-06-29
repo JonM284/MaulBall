@@ -426,6 +426,23 @@ MonoBehaviour:
   target_Pos: {fileID: 0}
   saved_Target_Pos: {fileID: 0}
   random_Offset: 15
+  ability_Duration:
+  - 0
+  - 0
+  - 0
+  ability_Cooldown:
+  - 0
+  - 0
+  - 0
+  ability_Repeater_Time:
+  - 0
+  - 0
+  - 0
+  ability_Type_ID: 000000000000000000000000
+  all_Abilities:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
   current_Status: 0
 --- !u!54 &27227172
 Rigidbody:
@@ -19579,6 +19596,23 @@ MonoBehaviour:
   target_Pos: {fileID: 0}
   saved_Target_Pos: {fileID: 0}
   random_Offset: 15
+  ability_Duration:
+  - 0
+  - 0
+  - 0
+  ability_Cooldown:
+  - 0
+  - 0
+  - 0
+  ability_Repeater_Time:
+  - 0
+  - 0
+  - 0
+  ability_Type_ID: 000000000000000000000000
+  all_Abilities:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
   current_Status: 0
 --- !u!23 &134709154
 MeshRenderer:
@@ -30676,6 +30710,23 @@ MonoBehaviour:
   target_Pos: {fileID: 0}
   saved_Target_Pos: {fileID: 0}
   random_Offset: 15
+  ability_Duration:
+  - 0
+  - 0
+  - 0
+  ability_Cooldown:
+  - 0
+  - 0
+  - 0
+  ability_Repeater_Time:
+  - 0
+  - 0
+  - 0
+  ability_Type_ID: 000000000000000000000000
+  all_Abilities:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
   current_Status: 0
 --- !u!54 &350972539
 Rigidbody:
@@ -45456,6 +45507,23 @@ MonoBehaviour:
   target_Pos: {fileID: 0}
   saved_Target_Pos: {fileID: 0}
   random_Offset: 15
+  ability_Duration:
+  - 0
+  - 0
+  - 0
+  ability_Cooldown:
+  - 0
+  - 0
+  - 0
+  ability_Repeater_Time:
+  - 0
+  - 0
+  - 0
+  ability_Type_ID: 000000000000000000000000
+  all_Abilities:
+  - {fileID: 11400000, guid: 199cd7dfb1e1c3440bcf4457bce60129, type: 2}
+  - {fileID: 11400000, guid: f43f7a2a3a8b8c64ca9bb8556a6c8d4f, type: 2}
+  - {fileID: 11400000, guid: d4169f60dc7dde04eb1ada90c434c614, type: 2}
   current_Status: 0
 --- !u!23 &835129944
 MeshRenderer:
@@ -55127,6 +55195,23 @@ MonoBehaviour:
   target_Pos: {fileID: 0}
   saved_Target_Pos: {fileID: 0}
   random_Offset: 15
+  ability_Duration:
+  - 0
+  - 0
+  - 0
+  ability_Cooldown:
+  - 0
+  - 0
+  - 0
+  ability_Repeater_Time:
+  - 0
+  - 0
+  - 0
+  ability_Type_ID: 000000000000000000000000
+  all_Abilities:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
   current_Status: 0
 --- !u!54 &1008612494
 Rigidbody:
@@ -64745,6 +64830,23 @@ MonoBehaviour:
   target_Pos: {fileID: 0}
   saved_Target_Pos: {fileID: 0}
   random_Offset: 15
+  ability_Duration:
+  - 0
+  - 0
+  - 0
+  ability_Cooldown:
+  - 0
+  - 0
+  - 0
+  ability_Repeater_Time:
+  - 0
+  - 0
+  - 0
+  ability_Type_ID: 000000000000000000000000
+  all_Abilities:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
   current_Status: 0
 --- !u!23 &1210434144
 MeshRenderer:

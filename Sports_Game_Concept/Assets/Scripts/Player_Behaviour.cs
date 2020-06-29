@@ -42,11 +42,13 @@ public class Player_Behaviour : MonoBehaviour {
     private float min_Z, max_Z, min_X, max_X;
     private float m_Ball_Throw_Cooldown = 0.5f, m_Orig_Cooldown, m_Tackle_Duration, m_Slide_Tackle_Duration
         , m_original_Speed, m_Attack_Speed_Cooldown = 1f, m_Time_To_Reach, m_Damage_Cooldown, m_DC_Max_Original, m_Electric_Damage_Cooldown, 
-        m_orig_attack_Cooldown;
+        m_orig_attack_Cooldown, m_Dash_Duration, m_Current_Dash_Duration, m_invulnerability_Dur, m_Cur_Invul_Dur;
+    
     [HideInInspector] public GameObject m_Owned_Ball;
     private Player m_Player;
     private bool m_can_Catch_Ball = true, m_Is_Holding_Lob = false, m_Is_Tackling = false, m_Is_Slide_Tackling = false
-        , m_Read_Player_Inputs = true, m_Has_Attacked = false, m_Is_Attacking = false, m_Taking_Damage = false;
+        , m_Read_Player_Inputs = true, m_Has_Attacked = false, m_Is_Attacking = false, m_Taking_Damage = false, m_Is_Dashing = false;
+    [HideInInspector] public bool m_Can_Be_Attacked = true;
     private ParticleSystem impact_PS;
 
     [SerializeField] private bool m_Is_Moving, m_Is_Being_Passed_To = false;
@@ -56,6 +58,17 @@ public class Player_Behaviour : MonoBehaviour {
     [HideInInspector]public Transform target_Pos, saved_Target_Pos;
     public float random_Offset;
     private Vector3 m_random_Offset, target_Vec;
+
+    //ABILITY VARIABLES
+    [HideInInspector]
+    public float[] ability_Duration = new float[3];
+    [HideInInspector]
+    public float[] ability_Cooldown = new float[3];
+    [HideInInspector]
+    public float[] ability_Repeater_Time = new float[3];
+    [HideInInspector]
+    public int[] ability_Type_ID = new int[3];
+    public Ability[] all_Abilities = new Ability[3];
 
     public enum status
     {
@@ -95,6 +108,14 @@ public class Player_Behaviour : MonoBehaviour {
         m_DC_Max_Original = damage_Cooldown_Max;
         m_Electric_Damage_Cooldown = damage_Cooldown_Max + 1.5f;
         m_orig_attack_Cooldown = attack_Cooldown;
+
+        for (int i = 0; i < all_Abilities.Length; i++)
+        {
+            if (all_Abilities[i] != null)
+            {
+                all_Abilities[i].SetUp_Ability(this, i);
+            }
+        }
     }
 
     private void FixedUpdate()
@@ -103,7 +124,7 @@ public class Player_Behaviour : MonoBehaviour {
             Movement();
         } else
         {
-            if (m_Is_Slide_Tackling || m_Is_Tackling) {
+            if (m_Is_Dashing) {
                 Do_Dash(transform.forward);
             } else if (m_Taking_Damage)
             {
@@ -180,7 +201,7 @@ public class Player_Behaviour : MonoBehaviour {
 
     }
 
-    void Do_Dash(Vector3 _dash_Dir)
+    public void Do_Dash(Vector3 _dash_Dir)
     {
         vel.x = _dash_Dir.x * speed;
         vel.z = _dash_Dir.z * speed;
@@ -189,6 +210,8 @@ public class Player_Behaviour : MonoBehaviour {
         rb.MovePosition(rb.position + new Vector3(Mathf.Clamp(vel.x, -speed, speed),
             vel.y, Mathf.Clamp(vel.z, -speed, speed)) * Time.deltaTime);
     }
+
+
 
     void Check_Inputs()
     {
@@ -215,21 +238,22 @@ public class Player_Behaviour : MonoBehaviour {
         m_Is_Holding_Lob = (m_Player.GetButton("S_Lob") && m_Owned_Ball != null) ? true : false;
 
         //press without ball to preform a MAUL
-        if (m_Player.GetButtonDown("S_Lob") && m_Owned_Ball == null && player_Controlled && !m_Taking_Damage && !m_Has_Attacked)
+        if (m_Player.GetButtonDown("S_Lob") && !m_Player.GetButtonDown("Sprint") && m_Owned_Ball == null && player_Controlled && !m_Taking_Damage && !m_Has_Attacked)
         {
             //Maul
             Slide_Tackle();
         }
 
-        if (m_Player.GetButtonSinglePressDown("Sprint") && player_Controlled)
+        /*if (m_Player.GetButtonSinglePressDown("Sprint") && player_Controlled)
         {
             team_Manager.Change_Status(this.gameObject);
-        }
+        }*/
 
         //press to use primary ability
         if (m_Player.GetButtonDown("Ability_1") && !m_Taking_Damage)
         {
             //Do ability
+            Do_Ability(0);
             //Start Cooldown
         }
 
@@ -237,7 +261,13 @@ public class Player_Behaviour : MonoBehaviour {
         if (m_Player.GetButtonDown("Ability_2") && !m_Taking_Damage)
         {
             //Do ability
+            Do_Ability(1);
             //Start Cooldown
+        }
+
+        if (m_Player.GetButtonDown("S_Lob") && m_Player.GetButtonDown("Sprint"))
+        {
+            Do_Ability(2);
         }
 
         //check whether or not player is moving
@@ -265,7 +295,29 @@ public class Player_Behaviour : MonoBehaviour {
             m_Ball_Throw_Cooldown = m_Orig_Cooldown;
         }
 
-        if (m_Slide_Tackle_Duration <= slide_Tackle_Dur_Max && m_Is_Slide_Tackling)
+        if (!m_Read_Player_Inputs && m_Current_Dash_Duration < m_Dash_Duration)
+        {
+            m_Current_Dash_Duration += Time.deltaTime;
+        }
+
+        if (!m_Read_Player_Inputs && m_Current_Dash_Duration >= m_Dash_Duration)
+        {
+            m_Current_Dash_Duration = 0;
+            Reset_Dash_Variables();
+        }
+
+        if (!m_Can_Be_Attacked && m_Cur_Invul_Dur < m_invulnerability_Dur)
+        {
+            m_Cur_Invul_Dur += Time.deltaTime;
+        }
+
+        if (!m_Can_Be_Attacked && m_Cur_Invul_Dur >= m_invulnerability_Dur)
+        {
+            m_Can_Be_Attacked = true;
+            m_Cur_Invul_Dur = 0;
+        }
+
+       /* if (m_Slide_Tackle_Duration <= slide_Tackle_Dur_Max && m_Is_Slide_Tackling)
         {
             m_Slide_Tackle_Duration += Time.deltaTime;
         }
@@ -290,7 +342,7 @@ public class Player_Behaviour : MonoBehaviour {
             m_Is_Tackling = false;
             m_Read_Player_Inputs = true;
             Slow_Speed();
-        }
+        }*/
 
         if (m_Attack_Speed_Cooldown >= 0 && m_Has_Attacked)
         {
@@ -359,22 +411,50 @@ public class Player_Behaviour : MonoBehaviour {
         m_Has_Attacked = false;
     }
 
+    public void Initiate_Invulnerability(bool _Is_Player_Invulnerable, float _Invul_Duration)
+    {
+        m_invulnerability_Dur = _Invul_Duration;
+        m_Can_Be_Attacked = !_Is_Player_Invulnerable;
+        
+    }
+
+    public void Initiate_Dash_Type(bool _Slide_Tackle, bool _Steal, bool _Ability_Use, float _duration, float _speed)
+    {
+        m_Is_Slide_Tackling = _Slide_Tackle;
+        m_Is_Tackling = _Steal;
+        m_Is_Dashing = true;
+        if (m_Is_Slide_Tackling || m_Is_Tackling)
+        {
+            m_Is_Attacking = true;
+        }else
+        {
+            m_Is_Attacking = false;
+        }
+        
+        m_Read_Player_Inputs = false;
+        m_Dash_Duration = _duration;
+        speed = _speed;
+    }
+
+    void Reset_Dash_Variables()
+    {
+        m_Is_Slide_Tackling = false;
+        m_Is_Tackling = false;
+        m_Is_Dashing = false;
+        m_Read_Player_Inputs = true;
+        Slow_Speed();
+    }
+
     void Tackle()
     {
-        m_Is_Tackling = true;
-        m_Is_Attacking = true;
-        m_Read_Player_Inputs = false;
         float _tackle_Speed = m_original_Speed * tackle_Speed_Mod;
-        speed = _tackle_Speed;
+        Initiate_Dash_Type(false, true, false, tackle_Dur_Max, _tackle_Speed);
     }
 
     void Slide_Tackle()
     {
-        m_Is_Slide_Tackling = true;
-        m_Is_Attacking = true;
-        m_Read_Player_Inputs = false;
         float _tackle_Speed = m_original_Speed * slide_Tackle_Speed_Mod;
-        speed = _tackle_Speed;
+        Initiate_Dash_Type(true, false, false, slide_Tackle_Dur_Max, _tackle_Speed);
     }
 
     public void Swap_Possessor(GameObject _new_Owner)
@@ -603,6 +683,11 @@ public class Player_Behaviour : MonoBehaviour {
         return velocityXZ + velocityY;
     }
 
+    public void Do_Ability(int ability_ID)
+    {
+        all_Abilities[ability_ID].Use_Ability();
+    }
+    
 
     private void OnCollisionEnter(Collision other)
     {
@@ -615,17 +700,19 @@ public class Player_Behaviour : MonoBehaviour {
 
         if (other.gameObject.tag == "Player" && (m_Is_Tackling || m_Is_Slide_Tackling))
         {
-            if (m_Is_Tackling) {
-                other.gameObject.GetComponent<Player_Behaviour>().Take_Damage(transform.position, tackle_Damage_Cooldown, true);
-                if (other.gameObject.GetComponent<Player_Behaviour>().m_Owned_Ball != null) {
-                    other.gameObject.GetComponent<Player_Behaviour>().Swap_Possessor(this.gameObject);
+            if (other.gameObject.GetComponent<Player_Behaviour>().m_Can_Be_Attacked) {
+                if (m_Is_Tackling) {
+                    other.gameObject.GetComponent<Player_Behaviour>().Take_Damage(transform.position, tackle_Damage_Cooldown, true);
+                    if (other.gameObject.GetComponent<Player_Behaviour>().m_Owned_Ball != null) {
+                        other.gameObject.GetComponent<Player_Behaviour>().Swap_Possessor(this.gameObject);
+                    }
+                    team_Manager.Ball_Pickup(this.gameObject);
+                } else if (m_Is_Slide_Tackling)
+                {
+                    other.gameObject.GetComponent<Player_Behaviour>().Take_Damage(transform.position, slide_Tackle_Damage_Cooldown, false);
+                    m_can_Catch_Ball = false;
+
                 }
-                team_Manager.Ball_Pickup(this.gameObject);
-            } else if (m_Is_Slide_Tackling)
-            {
-                other.gameObject.GetComponent<Player_Behaviour>().Take_Damage(transform.position, slide_Tackle_Damage_Cooldown, false);
-                m_can_Catch_Ball = false;
-                
             }
 
 
@@ -640,6 +727,31 @@ public class Player_Behaviour : MonoBehaviour {
         {
             Pick_Up_Ball(other.gameObject);
             team_Manager.Ball_Pickup(this.gameObject);
+        }
+
+        if (other.gameObject.tag == "Player" && (m_Is_Tackling || m_Is_Slide_Tackling) 
+            && !other.gameObject.GetComponent<Player_Behaviour>().m_Taking_Damage)
+        {
+            if (other.gameObject.GetComponent<Player_Behaviour>().m_Can_Be_Attacked)
+            {
+                if (m_Is_Tackling)
+                {
+                    other.gameObject.GetComponent<Player_Behaviour>().Take_Damage(transform.position, tackle_Damage_Cooldown, true);
+                    if (other.gameObject.GetComponent<Player_Behaviour>().m_Owned_Ball != null)
+                    {
+                        other.gameObject.GetComponent<Player_Behaviour>().Swap_Possessor(this.gameObject);
+                    }
+                    team_Manager.Ball_Pickup(this.gameObject);
+                }
+                else if (m_Is_Slide_Tackling)
+                {
+                    other.gameObject.GetComponent<Player_Behaviour>().Take_Damage(transform.position, slide_Tackle_Damage_Cooldown, false);
+                    m_can_Catch_Ball = false;
+
+                }
+            }
+
+
         }
     }
 
