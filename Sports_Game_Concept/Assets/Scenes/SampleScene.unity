@@ -421,6 +421,7 @@ MonoBehaviour:
   ball_reference: {fileID: 0}
   my_Indicator: {fileID: 0}
   m_Owned_Ball: {fileID: 0}
+  m_Can_Be_Attacked: 1
   m_Is_Moving: 0
   m_Is_Being_Passed_To: 0
   target_Pos: {fileID: 0}
@@ -19591,6 +19592,7 @@ MonoBehaviour:
   ball_reference: {fileID: 0}
   my_Indicator: {fileID: 0}
   m_Owned_Ball: {fileID: 0}
+  m_Can_Be_Attacked: 1
   m_Is_Moving: 0
   m_Is_Being_Passed_To: 0
   target_Pos: {fileID: 0}
@@ -30705,6 +30707,7 @@ MonoBehaviour:
   ball_reference: {fileID: 0}
   my_Indicator: {fileID: 0}
   m_Owned_Ball: {fileID: 0}
+  m_Can_Be_Attacked: 1
   m_Is_Moving: 0
   m_Is_Being_Passed_To: 0
   target_Pos: {fileID: 0}
@@ -45502,6 +45505,7 @@ MonoBehaviour:
   ball_reference: {fileID: 0}
   my_Indicator: {fileID: 0}
   m_Owned_Ball: {fileID: 0}
+  m_Can_Be_Attacked: 1
   m_Is_Moving: 0
   m_Is_Being_Passed_To: 0
   target_Pos: {fileID: 0}
@@ -55190,6 +55194,7 @@ MonoBehaviour:
   ball_reference: {fileID: 0}
   my_Indicator: {fileID: 0}
   m_Owned_Ball: {fileID: 0}
+  m_Can_Be_Attacked: 1
   m_Is_Moving: 0
   m_Is_Being_Passed_To: 0
   target_Pos: {fileID: 0}
@@ -64825,6 +64830,7 @@ MonoBehaviour:
   ball_reference: {fileID: 0}
   my_Indicator: {fileID: 0}
   m_Owned_Ball: {fileID: 0}
+  m_Can_Be_Attacked: 1
   m_Is_Moving: 0
   m_Is_Being_Passed_To: 0
   target_Pos: {fileID: 0}

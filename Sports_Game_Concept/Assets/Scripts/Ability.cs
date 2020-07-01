@@ -7,6 +7,7 @@ public class Ability : ScriptableObject {
 
     public enum ability_Type
     {
+        NONE,
         PROJECTILE,
         STATUS,
         AREA,
@@ -15,10 +16,13 @@ public class Ability : ScriptableObject {
         DASH
     }
 
+    
+
     public string ability_Name;
     [TextArea(3, 5)]
     public string  ability_Description;
     public ability_Type a_type;
+    public Vector3 spawning_Offset;
     [Tooltip("Projectile to be fired, if this ability calls for it. proj behaviour is on projectile.")]
     public GameObject projectile;
     [Tooltip("Duration of this ability.")]
@@ -29,6 +33,8 @@ public class Ability : ScriptableObject {
     public float repeat_Time;
     [Tooltip("Speed of the ability, if it calls for it.")]
     public float ability_Speed;
+    [Tooltip("Controls the size of the ability, projectiles and spawning objects")]
+    public float ability_Size;
     [HideInInspector]
     public Player_Behaviour my_player;
     [Tooltip("Causes the user to become invulnerable for the duration of the ability")]
@@ -61,6 +67,9 @@ public class Ability : ScriptableObject {
             case ability_Type.PROJECTILE:
                 my_player.ability_Type_ID[ID_Number] = (int)ability_Type.PROJECTILE;
                 break;
+            default:
+
+                break;
         }
 
         Debug.Log("Fully added ability");
@@ -79,7 +88,8 @@ public class Ability : ScriptableObject {
                 
                 break;
             case ability_Type.SPAWNING_OBJECT:
-                
+                GameObject _spawned_Obj = Instantiate(projectile, my_player.transform.position + my_player.transform.TransformDirection(spawning_Offset), Quaternion.identity) as GameObject;
+                _spawned_Obj.transform.localScale = new Vector3(ability_Size, ability_Size, ability_Size);
                 break;
             case ability_Type.AREA:
                 
@@ -90,6 +100,9 @@ public class Ability : ScriptableObject {
                 }
                 break;
             case ability_Type.PROJECTILE:
+                
+                break;
+            default:
 
                 break;
         }

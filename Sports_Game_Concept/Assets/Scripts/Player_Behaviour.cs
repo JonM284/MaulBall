@@ -411,6 +411,11 @@ public class Player_Behaviour : MonoBehaviour {
         m_Has_Attacked = false;
     }
 
+    public void Intiate_Stun(float _Stun_Duration)
+    {
+
+    }
+
     public void Initiate_Invulnerability(bool _Is_Player_Invulnerable, float _Invul_Duration)
     {
         m_invulnerability_Dur = _Invul_Duration;
