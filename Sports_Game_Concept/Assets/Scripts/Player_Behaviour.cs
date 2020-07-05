@@ -42,14 +42,14 @@ public class Player_Behaviour : MonoBehaviour {
     private float min_Z, max_Z, min_X, max_X;
     private float m_Ball_Throw_Cooldown = 0.5f, m_Orig_Cooldown, m_Tackle_Duration, m_Slide_Tackle_Duration
         , m_original_Speed, m_Attack_Speed_Cooldown = 1f, m_Time_To_Reach, m_Damage_Cooldown, m_DC_Max_Original, m_Electric_Damage_Cooldown, 
-        m_orig_attack_Cooldown, m_Dash_Duration, m_Current_Dash_Duration, m_invulnerability_Dur, m_Cur_Invul_Dur;
+        m_orig_attack_Cooldown, m_Dash_Duration, m_Current_Dash_Duration, m_invulnerability_Dur, m_Cur_Invul_Dur, m_Stun_Duration, m_Cur_Stun_Dur;
     
     [HideInInspector] public GameObject m_Owned_Ball;
     private Player m_Player;
     private bool m_can_Catch_Ball = true, m_Is_Holding_Lob = false, m_Is_Tackling = false, m_Is_Slide_Tackling = false
         , m_Read_Player_Inputs = true, m_Has_Attacked = false, m_Is_Attacking = false, m_Taking_Damage = false, m_Is_Dashing = false;
-    [HideInInspector] public bool m_Can_Be_Attacked = true;
-    private ParticleSystem impact_PS;
+    [HideInInspector] public bool m_Can_Be_Attacked = true, m_Using_Prox_Ultimate = false, m_Is_Being_Stunned = false;
+    private ParticleSystem impact_PS, Electrify_PS;
 
     [SerializeField] private bool m_Is_Moving, m_Is_Being_Passed_To = false;
     private Vector3 m_Ball_End_Position, damage_Dir;
@@ -63,13 +63,17 @@ public class Player_Behaviour : MonoBehaviour {
     [HideInInspector]
     public float[] ability_Duration = new float[3];
     [HideInInspector]
+    public float[] ability_Effect_Duration = new float[3];
+    [HideInInspector]
     public float[] ability_Cooldown = new float[3];
     [HideInInspector]
     public float[] ability_Repeater_Time = new float[3];
     [HideInInspector]
+    public float[] ability_Current_Duration = new float[3];
+    [HideInInspector]
     public int[] ability_Type_ID = new int[3];
     public Ability[] all_Abilities = new Ability[3];
-
+    public float proximity_Ability_Range;
     public enum status
     {
         IDLE,
@@ -91,6 +95,8 @@ public class Player_Behaviour : MonoBehaviour {
         }
 
         impact_PS = transform.Find("Hit_Effect").GetComponent<ParticleSystem>();
+        Electrify_PS = transform.Find("Electrified_Particles").GetComponent<ParticleSystem>();
+        Stop_Shock_Particles();
 
         if (!player_Controlled)
         {
@@ -113,7 +119,7 @@ public class Player_Behaviour : MonoBehaviour {
         {
             if (all_Abilities[i] != null)
             {
-                all_Abilities[i].SetUp_Ability(this, i);
+                all_Abilities[i].SetUp_Ability(this, i, this.GetInstanceID());
             }
         }
     }
@@ -124,11 +130,15 @@ public class Player_Behaviour : MonoBehaviour {
             Movement();
         } else
         {
-            if (m_Is_Dashing) {
+            if (m_Is_Dashing && !m_Is_Being_Stunned) {
                 Do_Dash(transform.forward);
-            } else if (m_Taking_Damage)
+            } else if (m_Taking_Damage && !m_Is_Being_Stunned)
             {
                 Do_Dash(damage_Dir);
+            }else if (m_Is_Being_Stunned)
+            {
+                m_Horizontal_Comp = 0;
+                m_Vertical_Comp = 0;
             }
         }
     }
@@ -250,7 +260,7 @@ public class Player_Behaviour : MonoBehaviour {
         }*/
 
         //press to use primary ability
-        if (m_Player.GetButtonDown("Ability_1") && !m_Taking_Damage)
+        if (m_Player.GetButtonDown("Ability_1") && !m_Player.GetButtonDown("Ability_2") && !m_Taking_Damage)
         {
             //Do ability
             Do_Ability(0);
@@ -258,14 +268,14 @@ public class Player_Behaviour : MonoBehaviour {
         }
 
         //press to use secondary ability
-        if (m_Player.GetButtonDown("Ability_2") && !m_Taking_Damage)
+        if (m_Player.GetButtonDown("Ability_2") && !m_Player.GetButtonDown("Ability_1") && !m_Taking_Damage)
         {
             //Do ability
             Do_Ability(1);
             //Start Cooldown
         }
 
-        if (m_Player.GetButtonDown("S_Lob") && m_Player.GetButtonDown("Sprint"))
+        if (m_Player.GetButtonDown("Ability_1") && m_Player.GetButtonDown("Ability_2"))
         {
             Do_Ability(2);
         }
@@ -379,8 +389,12 @@ public class Player_Behaviour : MonoBehaviour {
 
             } else
             {
-                speed = 0;
+                Hault_Speed();
                 damage_Cooldown_Max = m_Electric_Damage_Cooldown;
+                if (!Electrify_PS.isPlaying)
+                {
+                    Play_Shock_Particles();
+                }
             }
         }
 
@@ -391,8 +405,41 @@ public class Player_Behaviour : MonoBehaviour {
             m_Taking_Damage = false;
             m_Read_Player_Inputs = true;
             Slow_Speed();
+            if (Electrify_PS.isPlaying && !m_Is_Being_Stunned)
+            {
+                Stop_Shock_Particles();
+            }
         }
 
+        if (m_Cur_Stun_Dur < m_Stun_Duration && m_Is_Being_Stunned)
+        {
+            m_Cur_Stun_Dur += Time.deltaTime;
+            Hault_Speed();
+        }
+
+        if (m_Cur_Stun_Dur >= m_Stun_Duration && m_Is_Being_Stunned)
+        {
+            Reset_Stun();
+        }
+
+        if (m_Using_Prox_Ultimate && ability_Current_Duration[2] < ability_Duration[2])
+        {
+            ability_Current_Duration[2] += Time.deltaTime;
+            Stun_Prox_Players();
+        }
+
+        if (m_Using_Prox_Ultimate && ability_Current_Duration[2] >= ability_Duration[2])
+        {
+            m_Using_Prox_Ultimate = false;
+            ability_Current_Duration[2] = 0;
+            
+        }
+
+    }
+
+    public void Hault_Speed()
+    {
+        speed = 0;
     }
 
     public void Slow_Speed()
@@ -411,9 +458,21 @@ public class Player_Behaviour : MonoBehaviour {
         m_Has_Attacked = false;
     }
 
-    public void Intiate_Stun(float _Stun_Duration)
+    public void Initiate_Stun(float _Stun_Duration)
     {
+        m_Stun_Duration = _Stun_Duration;
+        m_Read_Player_Inputs = false;
+        m_Is_Being_Stunned = true;
+        Hault_Speed();
+        Play_Shock_Particles();
+    }
 
+    private void Reset_Stun()
+    {
+        m_Read_Player_Inputs = true;
+        m_Is_Being_Stunned = false;
+        Reset_Speed();
+        Stop_Shock_Particles();
     }
 
     public void Initiate_Invulnerability(bool _Is_Player_Invulnerable, float _Invul_Duration)
@@ -690,7 +749,7 @@ public class Player_Behaviour : MonoBehaviour {
 
     public void Do_Ability(int ability_ID)
     {
-        all_Abilities[ability_ID].Use_Ability();
+        all_Abilities[ability_ID].Use_Ability(this.gameObject.GetInstanceID(), this);
     }
     
 
@@ -765,6 +824,20 @@ public class Player_Behaviour : MonoBehaviour {
         rb.velocity = Vector3.zero;
     }
 
+
+    void Stun_Prox_Players()
+    {
+        Collider[] hit_Colliders = Physics.OverlapSphere(transform.position, proximity_Ability_Range);
+        int i = 0;
+        while (i < hit_Colliders.Length)
+        {
+            if (hit_Colliders[i].tag == "Player" && hit_Colliders[i].gameObject.GetComponent<Player_Behaviour>().Team_ID != Team_ID)
+            {
+                hit_Colliders[i].GetComponent<Player_Behaviour>().Initiate_Stun(ability_Effect_Duration[2]);
+            }
+            i++;
+        }
+    }
 
     void Pick_Up_Ball(GameObject other)
     {
@@ -855,8 +928,7 @@ public class Player_Behaviour : MonoBehaviour {
         {
             if (hit_Colliders[i].tag == "Player" && hit_Colliders[i].gameObject.GetComponent<Player_Behaviour>().Team_ID != Team_ID)
             {
-                target_Pos = hit_Colliders[i].transform;
-                target_Vec = new Vector3(target_Pos.position.x, transform.position.y, target_Pos.position.y);
+
                 return true;
             }
             i++;
@@ -970,7 +1042,7 @@ public class Player_Behaviour : MonoBehaviour {
                 Random_Target_Pos(target_Pos);
             }
         }
-        else if (current_Status == status.DEFEND && !m_In_Melee_Range() && !m_Taking_Damage)
+        else if (current_Status == status.DEFEND && !m_In_Melee_Range() && !m_Taking_Damage && !m_Is_Being_Stunned)
         {
             if (Vector3.Magnitude(target_Vec - transform.position) > 4)
             {
@@ -984,7 +1056,7 @@ public class Player_Behaviour : MonoBehaviour {
                 Defend_Goal_Pos(target_Pos);
             }
         }
-        else if (current_Status == status.DEFEND && m_In_Melee_Range() && !m_Is_Attacking && !m_Has_Attacked && !m_Taking_Damage)
+        else if (current_Status == status.DEFEND && m_In_Melee_Range() && !m_Is_Attacking && !m_Has_Attacked && !m_Taking_Damage && !m_Is_Being_Stunned)
         {
             Vector3 _dir_To_Target = target_Vec - transform.position;
             Vector3 _Norm_Dir = _dir_To_Target.normalized;
@@ -995,7 +1067,7 @@ public class Player_Behaviour : MonoBehaviour {
         }
         else if (current_Status == status.BALL)
         {
-            if (m_Ball_In_Prox() && !m_Taking_Damage)
+            if (m_Ball_In_Prox() && !m_Taking_Damage && !m_Is_Being_Stunned)
             {
                 target_Vec = target_Pos.position;
                 Vector3 _dir_To_Target = target_Vec - transform.position;
@@ -1003,7 +1075,7 @@ public class Player_Behaviour : MonoBehaviour {
                 m_Horizontal_Comp = _Norm_Dir.x;
                 m_Vertical_Comp = _Norm_Dir.z;
             }
-            else if (!m_Ball_In_Prox() && !m_Taking_Damage)
+            else if (!m_Ball_In_Prox() && !m_Taking_Damage && !m_Is_Being_Stunned)
             {
                 if (Vector3.Magnitude(target_Vec - transform.position) > 4)
                 {
@@ -1037,6 +1109,20 @@ public class Player_Behaviour : MonoBehaviour {
         
     }
 
+    /// <summary>
+    /// EFFECTS ARE AFTER THIS POINT, particle systems turn on and off here.
+    /// </summary>
+    
+    void Play_Shock_Particles()
+    {
+        Electrify_PS.Play();
+    }
+
+    void Stop_Shock_Particles()
+    {
+        Electrify_PS.Stop();
+    }
+
     ///////////////////////////////// GIZMO DRAWS
     private void OnDrawGizmos()
     {
@@ -1048,5 +1134,7 @@ public class Player_Behaviour : MonoBehaviour {
         Gizmos.DrawWireSphere(transform.position + transform.forward * ground_Ray_Dist, ground_Ray_Rad * 1.5f);
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position + Vector3.down * ground_Ray_Dist, m_ball_Check_Radius);
+        Gizmos.color = Color.green;
+        Gizmos.DrawWireSphere(transform.position, proximity_Ability_Range);
     }
 }

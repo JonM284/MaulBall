@@ -13,13 +13,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ability_Name: Electric_Dash
   ability_Description: 
-  a_type: 5
+  a_type: 6
   spawning_Offset: {x: 0, y: 0, z: 0}
   projectile: {fileID: 0}
   duration: 0.1
+  effect_Duration: 0
   cooldown: 3
   repeat_Time: 5
   ability_Speed: 50
   ability_Size: 0
-  my_player: {fileID: 0}
   causes_Invul: 1
+  Is_Stun_Ultimate: 0

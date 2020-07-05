@@ -13,7 +13,8 @@ public class Ability : ScriptableObject {
         AREA,
         SPAWNING_OBJECT,
         REPEATER,
-        DASH
+        DASH,
+        PROXIMITY
     }
 
     
@@ -27,6 +28,8 @@ public class Ability : ScriptableObject {
     public GameObject projectile;
     [Tooltip("Duration of this ability.")]
     public float duration;
+    [Tooltip("Effect Duration of this ability.")]
+    public float effect_Duration;
     [Tooltip("Cooldown time for this ability.")]
     public float cooldown;
     [Tooltip("Interval time for repeatable abilities.")]
@@ -35,38 +38,42 @@ public class Ability : ScriptableObject {
     public float ability_Speed;
     [Tooltip("Controls the size of the ability, projectiles and spawning objects")]
     public float ability_Size;
-    [HideInInspector]
-    public Player_Behaviour my_player;
     [Tooltip("Causes the user to become invulnerable for the duration of the ability")]
     public bool causes_Invul;
+    public bool Is_Stun_Ultimate;
 
+    public void SetUp_Ability(Player_Behaviour _character, int ID_Number, int _player_Instance) {
+       
 
-    public void SetUp_Ability(Player_Behaviour _character, int ID_Number) {
-        my_player = _character;
-
-        my_player.ability_Cooldown[ID_Number] = cooldown;
-        my_player.ability_Duration[ID_Number] = duration;
-        my_player.ability_Repeater_Time[ID_Number] = repeat_Time;
+        _character.ability_Cooldown[ID_Number] = cooldown;
+        _character.ability_Duration[ID_Number] = duration;
+        _character.ability_Repeater_Time[ID_Number] = repeat_Time;
+        _character.ability_Effect_Duration[ID_Number] = effect_Duration;
         switch (a_type)
         {
+            case ability_Type.PROXIMITY:
+                _character.ability_Type_ID[ID_Number] = (int)ability_Type.PROXIMITY;
+                _character.GetComponent<Player_Behaviour>().proximity_Ability_Range = ability_Size;
+                break;
             case ability_Type.DASH:
-                my_player.ability_Type_ID[ID_Number] = (int)ability_Type.DASH;
+                _character.ability_Type_ID[ID_Number] = (int)ability_Type.DASH;
                 break;
             case ability_Type.REPEATER:
-                my_player.ability_Type_ID[ID_Number] = (int)ability_Type.REPEATER;
+                _character.ability_Type_ID[ID_Number] = (int)ability_Type.REPEATER;
                 break;
             case ability_Type.SPAWNING_OBJECT:
-                my_player.ability_Type_ID[ID_Number] = (int)ability_Type.SPAWNING_OBJECT;
+                _character.ability_Type_ID[ID_Number] = (int)ability_Type.SPAWNING_OBJECT;
                 break;
             case ability_Type.AREA:
-                my_player.ability_Type_ID[ID_Number] = (int)ability_Type.AREA;
+                _character.ability_Type_ID[ID_Number] = (int)ability_Type.AREA;
                 break;
             case ability_Type.STATUS:
-                my_player.ability_Type_ID[ID_Number] = (int)ability_Type.STATUS;
+                _character.ability_Type_ID[ID_Number] = (int)ability_Type.STATUS;
                 break;
             case ability_Type.PROJECTILE:
-                my_player.ability_Type_ID[ID_Number] = (int)ability_Type.PROJECTILE;
+                _character.ability_Type_ID[ID_Number] = (int)ability_Type.PROJECTILE;
                 break;
+            
             default:
 
                 break;
@@ -75,28 +82,36 @@ public class Ability : ScriptableObject {
         Debug.Log("Fully added ability");
     }
 
-    public void Use_Ability() {
+    public void Use_Ability(int _player_Instance, Player_Behaviour _player) {
         switch (a_type)
         {
+            case ability_Type.PROXIMITY:
+                if (Is_Stun_Ultimate)
+                {
+                    _player.GetComponent<Player_Behaviour>().m_Using_Prox_Ultimate = true;
+                    
+                }
+                break;
             case ability_Type.DASH:
-                my_player.Initiate_Dash_Type(false, false, true, duration, ability_Speed);
+                _player.Initiate_Dash_Type(false, false, true, duration, ability_Speed);
                 if (causes_Invul) {
-                    my_player.Initiate_Invulnerability(true, duration);
+                    _player.Initiate_Invulnerability(true, duration);
                 }
                 break;
             case ability_Type.REPEATER:
                 
                 break;
             case ability_Type.SPAWNING_OBJECT:
-                GameObject _spawned_Obj = Instantiate(projectile, my_player.transform.position + my_player.transform.TransformDirection(spawning_Offset), Quaternion.identity) as GameObject;
+                GameObject _spawned_Obj = Instantiate(projectile, _player.transform.position + _player.transform.TransformDirection(spawning_Offset), Quaternion.identity) as GameObject;
                 _spawned_Obj.transform.localScale = new Vector3(ability_Size, ability_Size, ability_Size);
+                _spawned_Obj.GetComponent<Area_Effects>().Setup(_player_Instance, duration, effect_Duration);
                 break;
             case ability_Type.AREA:
                 
                 break;
             case ability_Type.STATUS:
                 if (causes_Invul) {
-                    my_player.Initiate_Invulnerability(true, duration);
+                    _player.Initiate_Invulnerability(true, duration);
                 }
                 break;
             case ability_Type.PROJECTILE:

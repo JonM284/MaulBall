@@ -16,10 +16,12 @@ MonoBehaviour:
   a_type: 4
   spawning_Offset: {x: 0, y: 0, z: 0}
   projectile: {fileID: 1174549758277010, guid: a1a0989991cd85f429448e2628aee65d, type: 2}
-  duration: 10
+  duration: 5
+  effect_Duration: 1
   cooldown: 20
   repeat_Time: 5
   ability_Speed: 0
-  ability_Size: 3.56
+  ability_Size: 4
   my_player: {fileID: 0}
   causes_Invul: 0
+  Is_Stun_Ultimate: 0
