@@ -21,6 +21,6 @@ MonoBehaviour:
   cooldown: 3
   repeat_Time: 0
   ability_Speed: 0
-  ability_Size: 5
+  ability_Size: 3
   causes_Invul: 0
   Is_Stun_Ultimate: 1

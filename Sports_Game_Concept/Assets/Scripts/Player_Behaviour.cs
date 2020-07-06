@@ -471,6 +471,7 @@ public class Player_Behaviour : MonoBehaviour {
     {
         m_Read_Player_Inputs = true;
         m_Is_Being_Stunned = false;
+        m_Cur_Stun_Dur = 0;
         Reset_Speed();
         Stop_Shock_Particles();
     }

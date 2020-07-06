@@ -56,15 +56,13 @@ public class Area_Effects : MonoBehaviour {
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.gameObject.GetInstanceID() != player_Instance)
+        if (other.gameObject.GetInstanceID() != player_Instance && other.gameObject.tag == "Player")
         {
             //apply status effect
             switch (a_type)
             {
                 case Area_Type.STUN_ZONE:
-                    if (!other.gameObject.GetComponent<Player_Behaviour>().m_Is_Being_Stunned) {
-                        other.gameObject.GetComponent<Player_Behaviour>().Initiate_Stun(ability_Effect_Duration);
-                    }
+                   other.gameObject.GetComponent<Player_Behaviour>().Initiate_Stun(ability_Effect_Duration);
                     break;
             }
 
