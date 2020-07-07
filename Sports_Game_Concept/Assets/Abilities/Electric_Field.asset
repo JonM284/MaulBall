@@ -21,7 +21,6 @@ MonoBehaviour:
   cooldown: 20
   repeat_Time: 5
   ability_Speed: 0
-  ability_Size: 4
-  my_player: {fileID: 0}
+  ability_Size: {x: 4, y: 4, z: 4}
   causes_Invul: 0
   Is_Stun_Ultimate: 0

@@ -102,6 +102,9 @@ public class Player_Behaviour : MonoBehaviour {
         {
             Player_ID = 8;
         }
+
+        //TEMPORARY
+        transform.name = "Test_Player_Team_" + Team_ID;
     }
 
     // Use this for initialization
@@ -467,6 +470,9 @@ public class Player_Behaviour : MonoBehaviour {
         Play_Shock_Particles();
     }
 
+    /// <summary>
+    /// Reset variable
+    /// </summary>
     private void Reset_Stun()
     {
         m_Read_Player_Inputs = true;

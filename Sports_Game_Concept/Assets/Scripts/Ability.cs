@@ -37,7 +37,7 @@ public class Ability : ScriptableObject {
     [Tooltip("Speed of the ability, if it calls for it.")]
     public float ability_Speed;
     [Tooltip("Controls the size of the ability, projectiles and spawning objects")]
-    public float ability_Size;
+    public Vector3 ability_Size;
     [Tooltip("Causes the user to become invulnerable for the duration of the ability")]
     public bool causes_Invul;
     public bool Is_Stun_Ultimate;
@@ -53,7 +53,7 @@ public class Ability : ScriptableObject {
         {
             case ability_Type.PROXIMITY:
                 _character.ability_Type_ID[ID_Number] = (int)ability_Type.PROXIMITY;
-                _character.GetComponent<Player_Behaviour>().proximity_Ability_Range = ability_Size;
+                _character.GetComponent<Player_Behaviour>().proximity_Ability_Range = ability_Size.x;
                 break;
             case ability_Type.DASH:
                 _character.ability_Type_ID[ID_Number] = (int)ability_Type.DASH;
@@ -102,8 +102,8 @@ public class Ability : ScriptableObject {
                 
                 break;
             case ability_Type.SPAWNING_OBJECT:
-                GameObject _spawned_Obj = Instantiate(projectile, _player.transform.position + _player.transform.TransformDirection(spawning_Offset), Quaternion.identity) as GameObject;
-                _spawned_Obj.transform.localScale = new Vector3(ability_Size, ability_Size, ability_Size);
+                GameObject _spawned_Obj = Instantiate(projectile, _player.transform.position + _player.transform.TransformDirection(spawning_Offset), _player.transform.rotation) as GameObject;
+                _spawned_Obj.transform.localScale = new Vector3(ability_Size.x, ability_Size.y, ability_Size.z);
                 _spawned_Obj.GetComponent<Area_Effects>().Setup(_player_Instance, duration, effect_Duration);
                 break;
             case ability_Type.AREA:
